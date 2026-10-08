@@ -10,8 +10,13 @@ from __future__ import annotations
 import datetime as dt
 import logging
 from dataclasses import dataclass
+import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from validacion import cost_model as _cm, pf_inference as _pi, walkforward as _wf   # noqa: E402
 
 log = logging.getLogger("lsr")
 TICK = 0.25
@@ -34,12 +39,8 @@ FOMC = {dt.date.fromisoformat(s) for s in FOMC}
 
 
 def costo_pts(inst: str, anio: int) -> float:
-    """Costo ida y vuelta en puntos: slippage 1 tick/lado + spread + comision. [VERIFICAR]"""
-    if inst == "NQ":
-        spread = 0.50 if anio <= 2019 else (0.75 if anio == 2020 else 0.375)
-        return 0.50 + spread + 0.225
-    spread = 0.375 if anio == 2020 else 0.25
-    return 0.50 + spread + 0.09
+    """Costo ida y vuelta en puntos: slippage 1 tick/lado + spread + comision. [VERIFICAR] -> validacion/cost_model.py"""
+    return _cm.costo_pts(inst, anio)
 
 
 def es_opex(d: dt.date) -> bool:
@@ -207,8 +208,11 @@ def simular(d: Dia, sig, modo_entrada: str, sl: float, tp: float, fin_sesion: in
 
 
 def generar(M: Mercado, bloque="A", N=4, modo_entrada="close", ventanas=VENT_A, estructural=False,
-            lag=1, filtros=True, extra_ks=(REF,), volmult=1.5, grid=True) -> pd.DataFrame:
-    """Un registro por (trade, combo). combo=(k,m) o 'EST'."""
+            lag=1, filtros=True, extra_ks=(REF,), volmult=1.5, grid=True,
+            invertir=False, timing_rng=None) -> pd.DataFrame:
+    """Un registro por (trade, combo). combo=(k,m) o 'EST'.
+    Placebos: lag=N (niveles de D-N); invertir=True (direccion opuesta, re-simulada);
+    timing_rng=np.random.Generator (cada senal se entrena en una vela 5m aleatoria de la ventana, misma gestion)."""
     rows = []
     fin_sesion = 959 if bloque == "A" else 569
     combos = [(k, m) for k in KS for m in MS] if grid else []
@@ -222,6 +226,15 @@ def generar(M: Mercado, bloque="A", N=4, modo_entrada="close", ventanas=VENT_A, 
         if not sigs:
             continue
         d, atr = x["dia"], x["atr"]
+        if timing_rng is not None:
+            e5 = d.b5["e"]
+            cand = [jj for jj in range(len(e5)) if (bloque == "B" or _en_ventana(int(e5[jj]), ventanas))
+                    and (bloque == "B" and int(e5[jj]) <= 570 or bloque == "A")]
+            if not cand:
+                continue
+            sigs = [(s[0], s[1], s[2], int(j2), int(e5[j2])) for s in sigs for j2 in [timing_rng.choice(cand)]]
+        if invertir:
+            sigs = [(-s[0],) + tuple(s[1:]) for s in sigs]
         for sig in sigs:
             dr, lvl, ext, j, fin = sig
             ent_ref = d.b5["c"][j]
@@ -252,25 +265,13 @@ def Rnet(df: pd.DataFrame, f: float = 1.0) -> np.ndarray:
     return ((df.pnl - f * df.costo) / df.sl).values
 
 
-def pf(r: np.ndarray) -> float:
-    g, p = r[r > 0].sum(), -r[r < 0].sum()
-    return float(g / p) if p > 0 else (np.inf if g > 0 else np.nan)
+pf = _pi.pf
+maxdd = _pi.maxdd
 
 
 def boot_pf(r: np.ndarray, n=5000, seed=7):
-    if len(r) < 5:
-        return np.nan, np.nan, np.nan
-    rng = np.random.default_rng(seed)
-    idx = rng.integers(0, len(r), (n, len(r)))
-    x = r[idx]
-    g = np.where(x > 0, x, 0).sum(1); p = -np.where(x < 0, x, 0).sum(1)
-    v = np.where(p > 0, g / np.where(p > 0, p, 1), np.inf)
-    return float(np.percentile(v, 5)), float(np.percentile(v, 50)), float(np.percentile(v, 95))
-
-
-def maxdd(r: np.ndarray) -> float:
-    c = np.cumsum(r)
-    return float((np.maximum.accumulate(np.r_[0, c])[1:] - c).max()) if len(r) else 0.0
+    b = _pi.bootstrap_iid(r, n, seed)
+    return b["pf_lo"], b["pf_med"], b["pf_hi"]
 
 
 def resumen(df: pd.DataFrame, mult: float, f: float = 1.0, riesgo: float = 0.005) -> dict:
@@ -287,31 +288,9 @@ def resumen(df: pd.DataFrame, mult: float, f: float = 1.0, riesgo: float = 0.005
                 DD_pct_1=dd * 0.01 * 100)
 
 
-def mc_dd(r: np.ndarray, n=5000, seed=11, riesgo=0.005):
-    rng = np.random.default_rng(seed)
-    d = []
-    for _ in range(n):
-        x = r[rng.integers(0, len(r), len(r))]
-        d.append(maxdd(x))
-    d = np.array(d) * riesgo * 100
-    return float(np.percentile(d, 50)), float(np.percentile(d, 95))
+mc_dd = _pi.mc_dd_iid
 
 
 def walk_forward(df: pd.DataFrame, anio_ini=2019, min_tr=30):
     """Entrena con anios < Y (expansivo), elige combo con mayor PF neto (>=min_tr trades), prueba en Y."""
-    cb_all = sorted(df.combo.unique(), key=str)
-    cb_grid = [c for c in cb_all if isinstance(c, tuple) and c != REF]
-    oos, folds = [], []
-    for Y in range(anio_ini, int(df.anio.max()) + 1):
-        tr = df[df.anio < Y]; te = df[df.anio == Y]
-        best, bpf = (1.0, 1.75), -1
-        for c in cb_grid:
-            s = tr[tr.combo == c]
-            if len(s) >= min_tr:
-                v = pf(Rnet(s))
-                if v > bpf: best, bpf = c, v
-        t = te[te.combo == best]
-        oos.append(t.assign(fold=Y, elegido=str(best)))
-        folds.append(dict(fold=Y, combo=best, PF_train=bpf, n_test=len(t), PF_test=pf(Rnet(t)) if len(t) else np.nan,
-                          expR=float(Rnet(t).mean()) if len(t) else np.nan))
-    return pd.concat(oos, ignore_index=True), pd.DataFrame(folds)
+    return _wf.walk_forward(df, Rnet, combo_ref=REF, combo_defecto=(1.0, 1.75), anio_ini=anio_ini, min_tr=min_tr)

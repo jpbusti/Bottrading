@@ -1,0 +1,8 @@
+=== data\raw\NQ_databento_1m_10y_RTH.csv.gz (2021-10-11 -> 2026-10-06) ===
+Velas: 486,175 | Sesiones: 1,267 | 2021-10-11 09:30:00-04:00 -> 2026-10-06 15:59:00-04:00
+Timestamps duplicados: 0
+Sesiones con <350 velas (de 390): 45 | con <200: 0
+Sesiones por anio: 2021:58, 2022:254, 2023:253, 2024:255, 2025:253, 2026:194
+Huecos intradia >5 min: 0 | >30 min: 0
+Velas con rango >1%: 37 | >3%: 1
+Velas con OHLC incoherente: 0 | precios <=0: 0

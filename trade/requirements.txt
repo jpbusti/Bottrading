@@ -1,5 +1,9 @@
-pandas
+﻿pandas
 numpy
+scipy
+statsmodels
+quantstats
+arch
 yfinance
 matplotlib
 requests
@@ -8,3 +12,5 @@ pytest
 databento
 zstandard
 # La libreria oficial `tiingo` NO es necesaria: se usa requests contra la API REST de Tiingo.
+# vectorbt y backtrader NO se usan: el motor propio (scripts/lsr, validacion/) es mas auditable.
+# scikit-learn NO se usa en ningun script. scipy: pdh_pdl_lab.py y statsmodels.

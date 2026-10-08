@@ -14,8 +14,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from validacion import pf_inference as _pi   # noqa: E402
 
 log = logging.getLogger("g2")
 NY = "America/New_York"
@@ -251,11 +257,7 @@ class Mercado:
 
 # ----------------------------------- estadistica -----------------------------------
 def pf(x: np.ndarray) -> float:
-    x = np.asarray(x, float)
-    if len(x) == 0:
-        return float("nan")
-    p = -x[x < 0].sum()
-    return x[x > 0].sum() / p if p > 0 else 99.0
+    return _pi.pf(x, sin_perdidas=99.0)
 
 
 def r_mult(t: pd.DataFrame, costo: float) -> np.ndarray:
@@ -266,16 +268,9 @@ def resumen(t: pd.DataFrame, costo: float, n_boot: int = 5000, seed: int = 42) -
     if len(t) == 0:
         return dict(n=0)
     R = r_mult(t, costo)
-    rng = np.random.default_rng(seed)
-    n = len(R)
-    ix = rng.integers(0, n, size=(n_boot, n))
-    bs = R[ix]
-    exp_b = bs.mean(axis=1)
-    pos, neg = np.where(bs > 0, bs, 0).sum(axis=1), -np.where(bs < 0, bs, 0).sum(axis=1)
-    pf_b = np.where(neg > 0, pos / np.maximum(neg, 1e-12), 99.0)
-    return dict(n=n, win=(R > 0).mean() * 100, PF=pf(R), expR=R.mean(),
-                exp_lo=np.percentile(exp_b, 5), exp_hi=np.percentile(exp_b, 95),
-                pf_lo=np.percentile(pf_b, 5), pf_hi=np.percentile(pf_b, 95),
+    b = _pi.bootstrap_iid(R, n_boot, seed, sin_perdidas=99.0)
+    return dict(n=len(R), win=(R > 0).mean() * 100, PF=pf(R), expR=R.mean(),
+                exp_lo=b["exp_lo"], exp_hi=b["exp_hi"], pf_lo=b["pf_lo"], pf_hi=b["pf_hi"],
                 pts_trade=((t["gross"] - costo).mean()))
 
 
@@ -290,26 +285,4 @@ def por_anio(t: pd.DataFrame, costo: float, min_n: int = 30) -> pd.DataFrame:
 
 
 def monte_carlo_dd(R: np.ndarray, bloque: int = 20, n_paths: int = 5000, seed: int = 7) -> dict:
-    rng = np.random.default_rng(seed)
-    n = len(R)
-    if n < bloque * 2:
-        return {}
-    dds, rachas = [], []
-    nb = int(np.ceil(n / bloque))
-    for _ in range(n_paths):
-        st = rng.integers(0, n - bloque + 1, size=nb)
-        x = np.concatenate([R[s:s + bloque] for s in st])[:n]
-        eq = np.cumsum(x)
-        dds.append((np.maximum.accumulate(eq) - eq).max())
-        r = m = 0
-        for v in x:
-            r = r + 1 if v < 0 else 0
-            m = max(m, r)
-        rachas.append(m)
-    eq0 = np.cumsum(R)
-    r = m = 0
-    for v in R:
-        r = r + 1 if v < 0 else 0
-        m = max(m, r)
-    return dict(dd_real=(np.maximum.accumulate(eq0) - eq0).max(), dd_p50=np.percentile(dds, 50),
-                dd_p95=np.percentile(dds, 95), racha_real=m, racha_p95=np.percentile(rachas, 95))
+    return _pi.monte_carlo_dd_bloques(R, bloque, n_paths, seed)

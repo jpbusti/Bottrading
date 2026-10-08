@@ -14,3 +14,4 @@ _por_borrar/
 organizar_proyecto.log
 .env
 *.log
+data/processed/**/*.pkl

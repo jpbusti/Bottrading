@@ -1,0 +1,5 @@
+LSR v1 NQ bloque A, combo (1.0, 1.75): n=1122 PF_neto=0.998
+Placebo nivel D-N: {'pf_real': 0.9981523780255895, 'pf_placebo': {2: 1.0854246029577461, 3: 0.78626960535809, 5: 1.014542659676461}, 'supera': False, 'peor_placebo': 1.0854246029577461}
+Placebo direccion invertida: {'pf_real': 0.9981523780255895, 'pf_invertido': 0.930920353206422, 'supera': False}
+Placebo timing aleatorio (50 sorteos): {'pf_real': 0.9981523780255895, 'pf_placebo_med': 0.8582174537535667, 'pf_placebo_p95': 0.9313244425818696, 'p': 0.0196078431372549, 'supera': False}
+Veredicto placebos: {'nivel': False, 'timing': False, 'direccion': False, 'todos': False}
