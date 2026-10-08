@@ -40,7 +40,7 @@ FOMC = {dt.date.fromisoformat(s) for s in FOMC}
 
 def costo_pts(inst: str, anio: int) -> float:
     """Costo ida y vuelta en puntos: slippage 1 tick/lado + spread + comision. [VERIFICAR] -> validacion/cost_model.py"""
-    return _cm.costo_pts(inst, anio)
+    return _cm.costo_pts(inst, anio, tabla=_cm.TABLA_LSR_V1)   # costos congelados del pre-registro LSR v1
 
 
 def es_opex(d: dt.date) -> bool:

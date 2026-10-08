@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from validacion import (bootstrap_bloques, bootstrap_iid, costo_pts, estado_verificacion, excluir_cada_anio, p_valor, pf,
-                        placebo_direccion, rejilla, walk_forward)
+from validacion import (TABLA_LSR_V1, bootstrap_bloques, bootstrap_iid, costo_pts, costo_trade, estado_verificacion,
+                        excluir_cada_anio, p_valor, pf, placebo_direccion, rejilla, walk_forward)
 
 RAIZ = Path(__file__).resolve().parents[1]
 TRADES_NQ_A = RAIZ / "resultados" / "lsr" / "trades_NQ_A.csv"
@@ -143,9 +143,43 @@ def test_bootstrap_por_dia():
 
 
 # ------------------------------------------------------------- costos
-def test_cost_model_reproduce_valores_historicos():
-    assert costo_pts("NQ", 2018) == pytest.approx(1.225) and costo_pts("NQ", 2020) == pytest.approx(1.475)
-    assert costo_pts("NQ", 2024) == pytest.approx(1.10)
-    assert costo_pts("ES", 2018) == pytest.approx(0.84) and costo_pts("ES", 2020) == pytest.approx(0.965)
-    assert costo_pts("ES", 2024) == pytest.approx(0.84)
-    assert estado_verificacion()["verificados"] == 0     # hasta que el usuario verifique con su broker
+def test_cost_model_legado_lsr_reproduce_valores_historicos():
+    def f(i, a):
+        return costo_pts(i, a, tabla=TABLA_LSR_V1)
+    assert f("NQ", 2018) == pytest.approx(1.225) and f("NQ", 2020) == pytest.approx(1.475)
+    assert f("NQ", 2024) == pytest.approx(1.10)
+    assert f("ES", 2018) == pytest.approx(0.84) and f("ES", 2020) == pytest.approx(0.965)
+    assert f("ES", 2024) == pytest.approx(0.84)
+
+
+@pytest.mark.parametrize("anio", [2018, 2024, 2026])
+def test_costo_trade_nq_ibkr(anio):
+    """NQ redondo: comision $4.30 + slippage 1 tick/lado ($5 x 2 = $10) = $14.30 (0.715 pts)."""
+    c = costo_trade("NQ", anio)
+    assert c["comision_usd"] == pytest.approx(4.30) and c["slippage_usd"] == pytest.approx(10.00)
+    assert c["total_usd"] == pytest.approx(14.30, abs=0.01)
+    assert c["total_pts"] == pytest.approx(14.30 / 20.0)
+
+
+@pytest.mark.parametrize("anio", [2018, 2024, 2026])
+def test_costo_trade_es_ibkr(anio):
+    """ES redondo: comision $4.30 + slippage 1 tick/lado ($12.50 x 2 = $25) = $29.30 (0.586 pts)."""
+    c = costo_trade("ES", anio)
+    assert c["comision_usd"] == pytest.approx(4.30) and c["slippage_usd"] == pytest.approx(25.00)
+    assert c["total_usd"] == pytest.approx(29.30, abs=0.01)
+    assert c["total_pts"] == pytest.approx(29.30 / 50.0)
+
+
+def test_costo_trade_contratos_y_marcas_de_verificacion():
+    from validacion.cost_model import NOTA_PREVIO, costo_anio
+    assert costo_trade("NQ", 2025, n_contratos=3)["total_usd"] == pytest.approx(3 * 14.30)
+    est = estado_verificacion()
+    assert est["verificados"] == 0 and len(est["sin_verificar"]) == 5 * 11   # 5 instrumentos x 2016-2026
+    assert "VERIFICAR CON IBKR" in costo_trade("ES", 2024)["estado"]
+    assert costo_anio("NQ", 2020).nota == NOTA_PREVIO and "dictados" in costo_anio("NQ", 2025).nota
+
+
+def test_costos_otros_contratos_cargados():
+    assert costo_trade("GC", 2025)["total_usd"] == pytest.approx(4.30 + 20.0)
+    assert costo_trade("BTC", 2025)["comision_usd"] == pytest.approx(15.00)
+    assert costo_trade("MBT", 2025)["comision_usd"] == pytest.approx(7.50)

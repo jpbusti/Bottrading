@@ -10,7 +10,8 @@ Qué se dejó configurado, qué verifiqué y qué tienes que hacer tú. Todo lo 
 | 2 | `requirements.txt` actualizado y `requirements.lock.txt` con versiones congeladas | ✅ probado en un entorno virtual NUEVO: instala y pasa `pytest` (29 tests) |
 | 3 | Módulo común `validacion/` (7 archivos): `pf_inference`, `walkforward`, `placebo`, `cost_model`, `atr_grid`, `event_study`, `__init__` | ✅ creado y cubierto por tests (excepto `event_study`, ver abajo) |
 | 4 | Funciones duplicadas extraídas: `pf`, `boot_pf`, `maxdd`, `mc_dd`, `walk_forward`, `costo_pts` (LSR) y `pf`, `resumen` (bootstrap), `monte_carlo_dd` (G2) ahora viven en `validacion/`; los motores las importan | ✅ numéricamente idéntico: el módulo reproduce el log de LSR v1 a 3 decimales |
-| 5 | Restaurar `claude/PREREGISTRO_LSR_V1.md` y `RESULTADO_LSR_V1.md` | ❌ **imposible**: nunca estuvieron en git (único .md en todo el historial: `trade/README.md`) ni los encontré en el disco |
+| 5 | Restaurar `claude/PREREGISTRO_LSR_V1.md` y `RESULTADO_LSR_V1.md` | ✅ (actualizado) NO estaban en GitHub (los 7 commits de `main` no los contienen) pero sí en la biblioteca del proyecto Claude (`knowledge/claude/`). Copiados a `claude/` junto con los dos de G2. `RESULTADO_LSR_V1.md` confirma NQ A: PF 1.016, IC90 inferior 0.877, placebo D-2 1.085 vs 0.998 |
+| 5b | `cost_model.py` por año con costos IBKR | ✅ (actualizado) ver `validacion/cost_model.py`; todo marcado `[VERIFICAR CON IBKR]`; LSR v1 conserva su tabla original (`TABLA_LSR_V1`) |
 | 6 | Tests: control negativo LSR v1, señal aleatoria, bootstrap por bloques/día, costos | ✅ `tests/test_validacion.py` |
 | 7 | Pre-registro de la siguiente hipótesis | ⏸ **No hecho a propósito**: tu mensaje pide primero proponer 3-5 hipótesis y esperar OK, y a la vez dice "no propongas hipótesis todavía". Prevaleció la regla explícita. Queda para la siguiente fase |
 | 8 | Instalación limpia | ✅ ver punto 2 |
@@ -65,7 +66,7 @@ Test de bootstrap: con trades independientes, bloques e iid coinciden (±0.06); 
 - Verificar: `python -c "import os; print('OK' if os.environ.get('DATABENTO_API_KEY') else 'FALTA')"` (no imprime la clave).
 
 **Paso 3 — Costos reales del broker (esto sí bloquea un backtest serio)**
-Hoy están todos los tramos con `verificado=False` en `validacion/cost_model.py`. Pídele a tu broker (o mira tu extracto):
+(Actualizado: `cost_model.py` ya tiene los valores IBKR que dictaste, por año, todos `[VERIFICAR CON IBKR]`; 2016-2023 asumidos iguales a 2024-2026 por falta de dato histórico.) Pídele a tu broker (o mira tu extracto):
 1. Comisión + tarifas de bolsa/NFA **ida y vuelta por contrato** en NQ y en ES (hoy supuesto: $4.50 en ambos).
 2. Spread típico en RTH por año (hoy supuesto: NQ 0.50 pts hasta 2019, 0.75 en 2020, 0.375 desde 2021; ES 0.25 / 0.375 / 0.25).
 3. Slippage que has visto en órdenes de mercado (hoy: 1 tick por lado = 0.50 pts ida y vuelta).
