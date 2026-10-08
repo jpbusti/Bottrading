@@ -1,0 +1,8 @@
+pandas
+numpy
+yfinance
+matplotlib
+requests
+tqdm
+pytest
+# La librería oficial `tiingo` NO es necesaria: se usa requests contra la API REST de Tiingo.
