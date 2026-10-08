@@ -1,4 +1,4 @@
-# NQ / ES Trading Lab
+﻿# NQ / ES Trading Lab
 
 Laboratorio de backtesting intradia para NQ (Nasdaq-100) y ES (S&P 500) con datos de Databento.
 Dos capas:
@@ -20,7 +20,6 @@ Dos capas:
 ```
 .
 ├── main.py                      # motor original: estrategias x filtros x parametros
-├── organizar_proyecto.py        # (una vez) reubica y aparta lo obsoleto; se puede borrar despues
 ├── requirements.txt
 ├── config/config.py             # rutas, ticker, intervalo, grids
 ├── src/                         # motor original reutilizable
