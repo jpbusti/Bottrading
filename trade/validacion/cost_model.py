@@ -1,32 +1,33 @@
 """Modelo de costos por contrato y POR ANIO (comision + slippage + spread), en dolares y en puntos.
 
 PROCEDENCIA DE LOS VALORES (leer antes de usar)
-  - Tabla IBKR (`TABLA_IBKR`, la que usa `costo_trade` por defecto): valores que el usuario (Juan) dicta como
-    "costos de Interactive Brokers" en el hilo del proyecto el 2026-10-08. NO se han contrastado con el contrato
-    ni con el extracto de su cuenta. Cada fila lleva el estado `[VERIFICAR CON IBKR]` hasta que el usuario confirme los
-    fees exactos (comision IBKR + exchange + regulatorios + NFA).
-  - Anios 2024-2026: se usan los valores dictados tal cual (`NOTA_BASE`).
-  - Anios 2016-2023: NO hay dato historico de IBKR. Se asumen IGUALES a 2024-2026 y se marcan con `NOTA_PREVIO`
-    ([VERIFICAR]). No es una estimacion real: las comisiones y fees de exchange han subido con el tiempo, asi que los
-    backtests de esos anios pueden estar optimistas. Reemplazar cuando haya un historico real (estados de cuenta).
-  - Spread: no fue dictado -> `spread_usd_rt = 0.0` ([VERIFICAR]). El slippage de 1 tick por lado se considera que ya
-    incluye el cruce de spread de una orden a mercado. La tabla legada de LSR v1 SI sumaba 0.25-0.75 pts de spread
-    (ver `TABLA_LSR_V1`), por eso los costos nuevos son ~40% menores: backtests nuevos y LSR v1 NO son comparables sin
-    elegir la misma tabla.
+  - Tabla IBKR (`TABLA_IBKR`, la que usa `costo_trade` por defecto): valores dictados por el usuario (Juan) en el hilo
+    del proyecto el 2026-10-08 (comisiones y slippage como "costos de Interactive Brokers"; spread por lado en un
+    segundo mensaje del mismo dia). NO se han contrastado con el contrato ni con el extracto de la cuenta: toda fila
+    lleva `[VERIFICAR CON IBKR]` hasta que el usuario confirme los fees exactos (IBKR + exchange + regulatorios + NFA).
+  - Anios 2024-2026: valores dictados tal cual (`NOTA_BASE`).
+  - Anios 2016-2023: NO hay dato historico. Se usa, componente a componente, el MAYOR entre lo dictado y el supuesto de
+    LSR v1 (NQ/ES), y se marcan con `NOTA_PREVIO` ([VERIFICAR]); GC/BTC/MBT repiten lo dictado. Es una cota prudente,
+    no un dato real: las comisiones y fees de exchange han subido con el tiempo.
+  - Componentes de un trade redondo (entrada + salida): comision RT + slippage (1 tick/lado x 2) + spread (1 tick/lado x 2).
+    Slippage y spread se suman a proposito (metodologia del proyecto); es un supuesto conservador [VERIFICAR].
   - `TABLA_LSR_V1`: supuestos originales del pre-registro LSR v1 (motor_lsr.costo_pts), conservados para reproducir
-    resultados historicos. Fuente: supuesto del proyecto, marcados [VERIFICAR] en el motor original.
-  - Ultima actualizacion de los valores: 2026-10-08 (mensaje del usuario en el hilo del proyecto).
+    resultados historicos. Con spread incluido, los costos NQ/ES nuevos son >= a los de LSR v1 (ver tests).
+  - Ultima actualizacion de los valores: 2026-10-08.
 
-NOTAS DE ESPECIFICACION (a verificar; NO se corrigieron los valores dictados)
-  - BTC (CME) y MBT: los datos dictados son internamente inconsistentes con las especificaciones CME que conozco
-    (BTC: multiplicador 5 BTC, tick $5 por BTC = $25; MBT: multiplicador 0.1 BTC, tick $5 por BTC = $0.50). Se guardan
-    tal cual, con `punto_valor` segun mi conocimiento de CME ([VERIFICAR]). Solo NQ y ES estan cubiertos por tests.
+BTC y MBT: [NO USAR HASTA VERIFICAR]. Estan cargados con los datos dictados, pero `costo_trade` lanza error salvo que se
+  pase `permitir_no_verificado=True`. Dudas conocidas (no se "corrigieron" en silencio):
+  - BTC (CME, 5 BTC): tick $5.00 por bitcoin = $25.00 por tick. El slippage dictado ($5.00 por lado) NO equivale a
+    1 tick ($25.00): inconsistencia pendiente.
+  - MBT (0.1 BTC): se cargo lo dictado (tick $0.50 por bitcoin = $0.05). Segun mi conocimiento de CME el tick del MBT
+    es $5.00 por bitcoin = $0.50 por contrato; es decir, lo dictado seria 10x menor. Verificar en la ficha de CME.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 ESTADO = "[VERIFICAR CON IBKR]"
+NO_USAR = "[NO USAR HASTA VERIFICAR]"
 NOTA_BASE = "valores dictados por el usuario 2026-10-08 (IBKR), sin confirmar con la cuenta"
 NOTA_PREVIO = "[VERIFICAR] sin dato historico: se asume igual a 2024-2026"
 ANIO_INI, ANIO_FIN, ANIO_BASE_DESDE = 2016, 2026, 2024
@@ -38,15 +39,16 @@ class Contrato:
     sym: str
     punto_valor: float      # USD por 1.0 punto de precio
     tick_pts: float         # tamano del tick en puntos
-    tick_usd: float         # USD por tick (dictado por el usuario donde aplica)
+    tick_usd: float         # USD por tick
+    usable: bool = True
 
 
 CONTRATOS: dict[str, Contrato] = {
     "NQ": Contrato("NQ", 20.0, 0.25, 5.00),
     "ES": Contrato("ES", 50.0, 0.25, 12.50),
     "GC": Contrato("GC", 100.0, 0.10, 10.00),
-    "BTC": Contrato("BTC", 5.0, 5.00, 5.00),      # [VERIFICAR] ver nota; tick_usd dictado = $5.00
-    "MBT": Contrato("MBT", 0.1, 1.00, 1.00),      # [VERIFICAR] ver nota; tick_pts dictado = $1.00
+    "BTC": Contrato("BTC", 5.0, 5.00, 25.00, usable=False),    # 5 BTC; tick $5/BTC = $25
+    "MBT": Contrato("MBT", 0.1, 0.50, 0.05, usable=False),     # 0.1 BTC; valores dictados (ver nota)
 }
 VALOR_PUNTO = {k: v.punto_valor for k, v in CONTRATOS.items()}
 
@@ -58,13 +60,17 @@ class CostoAnio:
     anio: int
     comision_usd_rt: float        # ida y vuelta, por contrato
     slippage_usd_lado: float      # USD por lado (1 tick)
-    spread_usd_rt: float = 0.0    # ida y vuelta, por contrato [VERIFICAR]
+    spread_usd_lado: float        # USD por lado (1 tick de spread) [VERIFICAR]
     estado: str = ESTADO
     nota: str = NOTA_BASE
 
     @property
     def slippage_usd_rt(self) -> float:
         return 2 * self.slippage_usd_lado
+
+    @property
+    def spread_usd_rt(self) -> float:
+        return 2 * self.spread_usd_lado
 
     @property
     def total_usd(self) -> float:
@@ -75,16 +81,45 @@ class CostoAnio:
         return self.total_usd / CONTRATOS[self.inst].punto_valor
 
 
-# Base dictada (IBKR): comision RT por contrato, slippage USD por lado (1 tick)
-_BASE = {"NQ": (4.30, 5.00), "ES": (4.30, 12.50), "GC": (4.30, 10.00), "BTC": (15.00, 5.00), "MBT": (7.50, 0.10)}
+# ---------------------------------------------------------------- tabla LEGADA (LSR v1)
+def _legado() -> dict[tuple[str, int], CostoAnio]:
+    """Reproduce exactamente motor_lsr.costo_pts original: slippage 0.50 pts RT + spread por anio + comision RT."""
+    t = {}
+    for a in range(ANIO_INI, ANIO_FIN + 1):
+        sp_nq = 0.50 if a <= 2019 else (0.75 if a == 2020 else 0.375)    # pts ida y vuelta
+        sp_es = 0.375 if a == 2020 else 0.25
+        t[("NQ", a)] = CostoAnio("NQ", a, 4.50, 0.25 * 20.0, sp_nq * 20.0 / 2, "[VERIFICAR]", "supuesto LSR v1")
+        t[("ES", a)] = CostoAnio("ES", a, 4.50, 0.25 * 50.0, sp_es * 50.0 / 2, "[VERIFICAR]", "supuesto LSR v1")
+    return t
+
+
+TABLA_LSR_V1 = _legado()
+
+
+# inst: (comision RT USD, slippage USD/lado, spread USD/lado)
+#   NQ: spread 0.25 pts x $20 = $5.00 | ES: 0.25 pts x $50 = $12.50 | GC: 0.10 pts x $100 = $10.00
+#   BTC: 1 tick = $25.00 | MBT: $0.05 (dictado)
+_BASE = {"NQ": (4.30, 5.00, 0.25 * 20.0), "ES": (4.30, 12.50, 0.25 * 50.0), "GC": (4.30, 10.00, 0.10 * 100.0),
+         "BTC": (15.00, 5.00, 25.00), "MBT": (7.50, 0.10, 0.05)}
 
 
 def _construir(base=_BASE) -> dict[tuple[str, int], CostoAnio]:
+    """2024-2026: valores dictados. Anios previos: para cada componente (comision, slippage, spread) el MAYOR entre lo
+    dictado y lo que asumia LSR v1 (solo NQ/ES). Asi un anio previo nunca queda mas barato que LSR v1 (p.ej. el
+    spread ampliado de 2020). Todo `[VERIFICAR]` hasta tener historico real."""
     t = {}
-    for inst, (com, slip) in base.items():
+    for inst, (com, slip, spr) in base.items():
         for a in range(ANIO_INI, ANIO_FIN + 1):
-            nota = NOTA_BASE if a >= ANIO_BASE_DESDE else NOTA_PREVIO
-            t[(inst, a)] = CostoAnio(inst, a, com, slip, 0.0, ESTADO, nota)
+            c_com, c_slip, c_spr, nota = com, slip, spr, NOTA_BASE
+            if a < ANIO_BASE_DESDE:
+                nota = NOTA_PREVIO
+                leg = TABLA_LSR_V1.get((inst, a))
+                if leg is not None:
+                    c_com, c_slip, c_spr = (max(com, leg.comision_usd_rt), max(slip, leg.slippage_usd_lado),
+                                            max(spr, leg.spread_usd_lado))
+                    nota += " (componentes = max(dictado, supuesto LSR v1))"
+            estado = ESTADO if CONTRATOS[inst].usable else f"{ESTADO} {NO_USAR}"
+            t[(inst, a)] = CostoAnio(inst, a, c_com, c_slip, c_spr, estado, nota)
     return t
 
 
@@ -92,7 +127,9 @@ def _construir(base=_BASE) -> dict[tuple[str, int], CostoAnio]:
 TABLA_IBKR: dict[tuple[str, int], CostoAnio] = _construir()
 
 
-def costo_anio(inst: str, anio: int, tabla=None) -> CostoAnio:
+def costo_anio(inst: str, anio: int, tabla=None, permitir_no_verificado: bool = False) -> CostoAnio:
+    if tabla is None and not CONTRATOS[inst].usable and not permitir_no_verificado:
+        raise ValueError(f"{inst} {NO_USAR}: pasa permitir_no_verificado=True solo para inspeccionar")
     tabla = TABLA_IBKR if tabla is None else tabla
     try:
         return tabla[(inst, anio)]
@@ -100,10 +137,9 @@ def costo_anio(inst: str, anio: int, tabla=None) -> CostoAnio:
         raise KeyError(f"sin costos para {inst} {anio}") from None
 
 
-def costo_trade(inst: str, anio: int, n_contratos: int = 1, tabla=None) -> dict:
-    """Costo de UN trade redondo (entrada + salida) en USD y en puntos, desglosado.
-    Solo NQ/ES estan cubiertos por tests; los demas usan los datos dictados."""
-    c = costo_anio(inst, anio, tabla)
+def costo_trade(inst: str, anio: int, n_contratos: int = 1, tabla=None, permitir_no_verificado: bool = False) -> dict:
+    """Costo de UN trade redondo (entrada + salida) en USD y en puntos, desglosado (comision + slippage + spread)."""
+    c = costo_anio(inst, anio, tabla, permitir_no_verificado)
     n = n_contratos
     return dict(inst=inst, anio=anio, contratos=n, estado=c.estado,
                 comision_usd=c.comision_usd_rt * n, slippage_usd=c.slippage_usd_rt * n, spread_usd=c.spread_usd_rt * n,
@@ -124,18 +160,3 @@ def estado_verificacion(tabla=None) -> dict:
     tabla = TABLA_IBKR if tabla is None else tabla
     pend = sorted({f"{c.inst} {c.anio}" for c in tabla.values() if "VERIFICAR" in c.estado})
     return dict(total=len(tabla), verificados=len(tabla) - len(pend), sin_verificar=pend)
-
-
-# ---------------------------------------------------------------- tabla LEGADA (LSR v1)
-def _legado() -> dict[tuple[str, int], CostoAnio]:
-    """Reproduce exactamente motor_lsr.costo_pts original: slippage 0.50 pts RT + spread por anio + comision RT en pts."""
-    t = {}
-    for a in range(ANIO_INI, ANIO_FIN + 1):
-        sp_nq = 0.50 if a <= 2019 else (0.75 if a == 2020 else 0.375)
-        sp_es = 0.375 if a == 2020 else 0.25
-        t[("NQ", a)] = CostoAnio("NQ", a, 4.50, 0.25 * 20.0, sp_nq * 20.0, "[VERIFICAR]", "supuesto LSR v1")
-        t[("ES", a)] = CostoAnio("ES", a, 4.50, 0.25 * 50.0, sp_es * 50.0, "[VERIFICAR]", "supuesto LSR v1")
-    return t
-
-
-TABLA_LSR_V1 = _legado()

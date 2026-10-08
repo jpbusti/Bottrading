@@ -154,32 +154,60 @@ def test_cost_model_legado_lsr_reproduce_valores_historicos():
 
 @pytest.mark.parametrize("anio", [2018, 2024, 2026])
 def test_costo_trade_nq_ibkr(anio):
-    """NQ redondo: comision $4.30 + slippage 1 tick/lado ($5 x 2 = $10) = $14.30 (0.715 pts)."""
+    """NQ redondo: comision $4.30 + slippage ($5 x 2) + spread (0.25 pts = $5 x 2) = $24.30 = 1.215 pts."""
     c = costo_trade("NQ", anio)
-    assert c["comision_usd"] == pytest.approx(4.30) and c["slippage_usd"] == pytest.approx(10.00)
-    assert c["total_usd"] == pytest.approx(14.30, abs=0.01)
-    assert c["total_pts"] == pytest.approx(14.30 / 20.0)
+    assert c["slippage_usd"] == pytest.approx(10.00) and c["total_pts"] >= 1.10
+    if anio >= 2024:
+        assert c["comision_usd"] == pytest.approx(4.30) and c["spread_usd"] == pytest.approx(10.00)
+        assert c["total_usd"] == pytest.approx(24.30, abs=0.01)
+        assert c["total_pts"] == pytest.approx(24.30 / 20.0)
 
 
 @pytest.mark.parametrize("anio", [2018, 2024, 2026])
 def test_costo_trade_es_ibkr(anio):
-    """ES redondo: comision $4.30 + slippage 1 tick/lado ($12.50 x 2 = $25) = $29.30 (0.586 pts)."""
+    """ES redondo 2024+: comision $4.30 + slippage ($12.50 x 2) + spread (0.25 pts = $12.50 x 2) = $54.30 = 1.086 pts."""
     c = costo_trade("ES", anio)
-    assert c["comision_usd"] == pytest.approx(4.30) and c["slippage_usd"] == pytest.approx(25.00)
-    assert c["total_usd"] == pytest.approx(29.30, abs=0.01)
-    assert c["total_pts"] == pytest.approx(29.30 / 50.0)
+    assert c["slippage_usd"] == pytest.approx(25.00) and c["spread_usd"] == pytest.approx(25.00)
+    if anio >= 2024:
+        assert c["comision_usd"] == pytest.approx(4.30)
+        assert c["total_usd"] == pytest.approx(54.30, abs=0.01)
+        assert c["total_pts"] == pytest.approx(54.30 / 50.0)
+    else:                                               # anios previos: comision = max(4.30, 4.50 de LSR v1)
+        assert c["total_usd"] == pytest.approx(54.50, abs=0.01)
+
+
+@pytest.mark.xfail(strict=True, reason="Con los valores dictados (1 tick de slippage + 1 tick de spread por lado) el ES "
+                   "redondo cuesta 1.086 pts, no >= 1.10. LSR v1 en ES costaba 0.84-0.965 pts (el 1.10 era de NQ).")
+@pytest.mark.parametrize("anio", [2024, 2025, 2026])
+def test_costo_es_ge_1_10_pts_solicitado(anio):
+    assert costo_trade("ES", anio)["total_pts"] >= 1.10
+
+
+@pytest.mark.parametrize("inst", ["NQ", "ES"])
+@pytest.mark.parametrize("anio", list(range(2016, 2027)))
+def test_costo_nuevo_no_es_menor_que_lsr_v1(inst, anio):
+    """Los costos nuevos (con spread) no pueden ser MENORES que los de LSR v1 en ningun anio: sesgaria a favor."""
+    assert costo_pts(inst, anio) >= costo_pts(inst, anio, tabla=TABLA_LSR_V1) - 1e-9
 
 
 def test_costo_trade_contratos_y_marcas_de_verificacion():
     from validacion.cost_model import NOTA_PREVIO, costo_anio
-    assert costo_trade("NQ", 2025, n_contratos=3)["total_usd"] == pytest.approx(3 * 14.30)
+    assert costo_trade("NQ", 2025, n_contratos=3)["total_usd"] == pytest.approx(3 * 24.30)
     est = estado_verificacion()
     assert est["verificados"] == 0 and len(est["sin_verificar"]) == 5 * 11   # 5 instrumentos x 2016-2026
     assert "VERIFICAR CON IBKR" in costo_trade("ES", 2024)["estado"]
-    assert costo_anio("NQ", 2020).nota == NOTA_PREVIO and "dictados" in costo_anio("NQ", 2025).nota
+    assert costo_anio("NQ", 2020).nota.startswith(NOTA_PREVIO) and "dictados" in costo_anio("NQ", 2025).nota
 
 
-def test_costos_otros_contratos_cargados():
-    assert costo_trade("GC", 2025)["total_usd"] == pytest.approx(4.30 + 20.0)
-    assert costo_trade("BTC", 2025)["comision_usd"] == pytest.approx(15.00)
-    assert costo_trade("MBT", 2025)["comision_usd"] == pytest.approx(7.50)
+def test_spread_nunca_cero_en_instrumentos_usables():
+    from validacion.cost_model import CONTRATOS, TABLA_IBKR
+    assert all(c.spread_usd_lado > 0 for c in TABLA_IBKR.values())
+    assert costo_trade("GC", 2025)["total_usd"] == pytest.approx(4.30 + 20.0 + 20.0)
+
+
+def test_btc_mbt_bloqueados_hasta_verificar():
+    with pytest.raises(ValueError, match="NO USAR"):
+        costo_trade("BTC", 2025)
+    with pytest.raises(ValueError, match="NO USAR"):
+        costo_trade("MBT", 2025)
+    assert "NO USAR HASTA VERIFICAR" in costo_trade("BTC", 2025, permitir_no_verificado=True)["estado"]
