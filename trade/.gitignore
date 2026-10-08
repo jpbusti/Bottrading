@@ -2,8 +2,15 @@ __pycache__/
 *.pyc
 .pytest_cache/
 data/raw/*.csv
+data/raw/**/*.csv
+data/raw/**/*.gz
+data/raw/**/*.zst
+data/raw/*.gz
 data/processed/*.csv
+data/processed/*.pkl
 resultados/csv/*.csv
 resultados/png/*.png
+_por_borrar/
+organizar_proyecto.log
 .env
 *.log

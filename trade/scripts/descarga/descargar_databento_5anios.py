@@ -5,7 +5,7 @@ Descarga 5 anios de NQ (CME) en 1m desde Databento y guarda SOLO la sesion regul
 
 Uso (PowerShell):
     $env:DATABENTO_API_KEY = "db-..."
-    python descargar_databento_5anios.py
+    python scripts/descarga/descargar_databento_5anios.py
 """
 import os
 import sys
@@ -59,7 +59,7 @@ minutos = df.index.hour * 60 + df.index.minute
 df = df[(minutos >= 570) & (minutos < 960)]       # 09:30-16:00 NY
 print(f"  {len(df):,} velas dentro de la sesion regular")
 
-salida = Path(__file__).parent / "data" / "raw"
+salida = Path(__file__).resolve().parents[2] / "data" / "raw"
 salida.mkdir(parents=True, exist_ok=True)
 archivo = salida / "NQ_databento_1m_5y_RTH.csv"
 df.to_csv(archivo)

@@ -1,0 +1,21 @@
+=== NQ_databento_1m_2016_2021_RTH.csv ===
+Velas: 495,425 | Sesiones: 1,289 | 2016-10-10 09:30:00-04:00 -> 2021-10-08 15:59:00-04:00
+Timestamps duplicados: 0
+Sesiones con <350 velas (de 390): 41 | con <200: 0
+Sesiones por anio: 2016:59, 2017:257, 2018:257, 2019:258, 2020:259, 2021:199
+Huecos intradia >5 min: 4 | >30 min: 0
+Velas con rango >1%: 40 | >3%: 1
+Velas con OHLC incoherente: 0 | precios <=0: 0
+Numero de rolls: 19
+Salto en rolls (apertura nuevo - cierre viejo, puntos): media +57.9 | min -38.0 | max +223.0
+
+=== ES_databento_1m_10y_RTH.csv ===
+Velas: 989,804 | Sesiones: 2,577 | 2016-10-10 09:30:00-04:00 -> 2026-10-07 15:59:00-04:00
+Timestamps duplicados: 0
+Sesiones con <350 velas (de 390): 86 | con <200: 0
+Sesiones por anio: 2016:59, 2017:257, 2018:257, 2019:258, 2020:259, 2021:258, 2022:258, 2023:257, 2024:259, 2025:257, 2026:198
+Huecos intradia >5 min: 4 | >30 min: 0
+Velas con rango >1%: 64 | >3%: 2
+Velas con OHLC incoherente: 0 | precios <=0: 0
+Numero de rolls: 39
+Salto en rolls (apertura nuevo - cierre viejo, puntos): media +20.0 | min -202.2 | max +147.5

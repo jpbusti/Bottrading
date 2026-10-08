@@ -1,0 +1,10 @@
+instr,metodo,n,win,PF,expR,exp_lo,exp_hi,pf_lo,pf_hi,pts_trade,PF_placebo,frac_anios,anios_eval,C1_PF_ge_1_15,C2_IC90_exp_gt0,C3_IC90_PF_gt1,C4_anios_PF_gt1_ge60,C5_PF_gt_placebo,TODOS
+NQ_2016_2021,ATR,577,43.6742,0.7627,-0.1544,-0.2293,-0.0744,0.6665,0.8784,-3.6865,0.683,0.0,5,False,False,False,False,True,False
+NQ_2016_2021,PCT,579,43.0052,0.8417,-0.0918,-0.1667,-0.0172,0.7297,0.9686,-2.4255,0.8834,0.2,5,False,False,False,False,False,False
+NQ_2016_2021,FIJO,536,44.7761,1.0077,0.0024,-0.0506,0.0581,0.845,1.2095,0.1884,1.0639,0.6,5,False,False,False,True,False,False
+ES_2016_2025,ATR,926,45.5724,0.7866,-0.1377,-0.1997,-0.0739,0.7048,0.8795,-0.7176,0.7223,0.1111,9,False,False,False,False,True,False
+ES_2016_2025,PCT,925,46.2703,0.9421,-0.0298,-0.0878,0.0279,0.8381,1.0573,-0.1107,0.8589,0.4444,9,False,False,False,False,True,False
+ES_2016_2025,FIJO,657,50.9893,1.0452,0.0063,-0.0196,0.0325,0.8704,1.2577,0.503,0.9605,0.4444,9,False,False,False,False,True,False
+ES_ultimo_anio,ATR,120,49.1667,1.0828,0.0459,-0.1326,0.2231,0.7934,1.47,0.412,0.9902,1.0,1,False,False,False,True,True,False
+ES_ultimo_anio,PCT,121,46.281,0.9698,-0.0158,-0.1757,0.149,0.7039,1.3309,-0.3642,1.1785,0.0,1,False,False,False,False,False,False
+ES_ultimo_anio,FIJO,107,50.4673,0.9636,-0.0065,-0.0779,0.0648,0.635,1.4562,-0.5187,1.0953,0.0,1,False,False,False,False,False,False
