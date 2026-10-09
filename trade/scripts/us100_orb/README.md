@@ -25,7 +25,7 @@ PF neto >= 1.15, IC90 inferior del PF > 1.0, >= 300 trades, max DD < 20%, supera
 ## Estado
 - [x] estructura y tests (datos sinteticos)
 - [x] parametros confirmados y pre-registro firmado (2026-10-09)
-- [ ] Fase 0: estudio de eventos
+- [x] Fase 0: estudio de eventos (v1: 10 eventos; v2 sin volumen: 219 eventos, sin edge, ver `docs/RESULTADO_US100_ORB_V2.md`)
 - [ ] backtest (US100, luego NQ proxy)
 - [ ] walk-forward
 - [ ] placebos

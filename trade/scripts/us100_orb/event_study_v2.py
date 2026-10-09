@@ -169,8 +169,12 @@ def comparar(re: pd.DataFrame, rb: pd.DataFrame, rng) -> pd.DataFrame:
 
 
 def main():
+    sin_vol = "--sin-volumen" in sys.argv
     cfg = cargar_config(CARPETA)
     cfg["datos"]["fuente"] = "us100"
+    if sin_vol:                                    # pre-registro v2: unico cambio = sin filtro de volumen
+        cfg["filtros"]["volumen"]["activo"] = False
+    sufijo = "_sinvol" if sin_vol else ""
     b = cargar(cfg)
     rng = np.random.default_rng(SEED)
     mot, g = excluidos(b)
@@ -181,8 +185,12 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     pd.set_option("display.width", 220)
     resumen = {}
-    for nombre, (mo, vw, vo, rt) in {"completo": (mot, 1, 1, 1), "completo_sin_calendario": (mot_sin, 1, 1, 1),
-                                     "ORB_crudo": (mot, 0, 0, 0), "+VWAP": (mot, 1, 0, 0), "+VWAP+volumen": (mot, 1, 1, 0)}.items():
+    vo1 = 0 if sin_vol else 1
+    etapas = {"completo": (mot, 1, vo1, 1), "completo_sin_calendario": (mot_sin, 1, vo1, 1),
+              "ORB_crudo": (mot, 0, 0, 0), "+VWAP": (mot, 1, 0, 0), "+VWAP+volumen": (mot, 1, 1, 0)}
+    if sin_vol:
+        etapas.pop("+VWAP+volumen")
+    for nombre, (mo, vw, vo, rt) in etapas.items():
         ev = eventos(b, cfg, mo, vw, vo, rt)
         print(f"\n=== {nombre}: {len(ev)} eventos ({(ev.d == 1).sum() if len(ev) else 0} long / {(ev.d == -1).sum() if len(ev) else 0} short)")
         if len(ev) < 3:
@@ -196,9 +204,9 @@ def main():
             print(tabs[modo].round(4).to_string(index=False))
             if nombre == "completo" and modo == "post":
                 e = ev.drop(columns=["i_a", "i_z", "i_ent"]).join(re.add_prefix("ret_")).join(rb.add_prefix("base_"))
-                e.to_csv(OUT / "event_study_v2_eventos.csv", index=False)
+                e.to_csv(OUT / f"event_study_v2{sufijo}_eventos.csv", index=False)
         resumen[nombre] = (ev, tabs)
-    pd.to_pickle({k: (v[0].drop(columns=["i_a", "i_z", "i_ent"], errors="ignore"), v[1]) for k, v in resumen.items()}, OUT / "event_study_v2.pkl")
+    pd.to_pickle({k: (v[0].drop(columns=["i_a", "i_z", "i_ent"], errors="ignore"), v[1]) for k, v in resumen.items()}, OUT / f"event_study_v2{sufijo}.pkl")
     ev = resumen["completo"][0]
     print("\nPor ano:\n", pd.Series(pd.to_datetime(ev.fecha).dt.year).value_counts().sort_index().to_string())
     print("Por hora ET de entrada:\n", pd.Series(ev.ts_entrada.dt.hour).value_counts().sort_index().to_string())
