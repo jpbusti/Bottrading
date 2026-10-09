@@ -36,3 +36,8 @@ Regla práctica: el spread (1.0-1.5 pts en IC Markets según el usuario) se rest
 1. Costos CFD reales (spread por hora, swap, valor del punto) — **[VERIFICAR CON IC MARKETS / PEPPERSTONE]**.
 2. Disponibilidad para clientes de Colombia — **[VERIFICAR con el bróker]**.
 3. Pre-registro del plan Auction Market Theory (PDH/PDL + VAH/VAL + POC + AVWAP) y su viabilidad con los datos actuales: ver `AUDITORIA_DATOS_2026-10-09.md` §7-8.
+
+## Estado de las pruebas (2026-10-09)
+- Datos del CFD: USTEC de la demo de IC Markets (1 min, 2018-2026). Ver `RESULTADO_US100_V1.md`.
+- Las cuatro hipótesis de `PREREGISTRO_US100_V1.md` (ORB, VWAP, PDH/PDL, VAH/VAL) NO pasan los criterios. Sin estrategia validada, **no se pasa a demo de ejecución ni a real**.
+- La cuenta demo es Netting (una posición por símbolo). Apalancamiento 1:200, USD, USTEC: contrato 1.0, 1 USD por punto por lote (según el bróker) [VERIFICAR].
