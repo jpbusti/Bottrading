@@ -1,4 +1,7 @@
 """Controles del motor US100: simulacion de SL/TP, perfil, VWAP y sin look-ahead en ATR."""
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[1]))   # permite `python tests/<archivo>.py` desde cualquier carpeta
 import numpy as np
 import pytest
 
@@ -51,3 +54,7 @@ def test_vwap_constante_si_precio_constante():
 
 def test_costo_base_es_2_puntos_y_estres_3():
     assert m.COSTO_BASE == pytest.approx(2.0) and m.COSTO_ESTRES == pytest.approx(3.0)
+
+if __name__ == "__main__":
+    import pytest as _pytest
+    raise SystemExit(_pytest.main([__file__, "-q"]))

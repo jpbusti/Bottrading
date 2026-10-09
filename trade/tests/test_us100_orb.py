@@ -1,4 +1,7 @@
 """us100_orb: config coincide con el pre-registro, senales (OR, ruptura, filtros, retest), sin look-ahead y simulacion. Solo datos sinteticos."""
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[1]))   # permite `python tests/<archivo>.py` desde cualquier carpeta
 import ast
 import copy
 from pathlib import Path
@@ -145,3 +148,7 @@ def test_validacion_nunca_importa_scripts():
         for n in ast.walk(ast.parse(f.read_text(encoding="utf-8"))):
             mods = [a.name for a in n.names] if isinstance(n, ast.Import) else [n.module or ""] if isinstance(n, ast.ImportFrom) else []
             assert not any(m == "scripts" or m.startswith("scripts.") for m in mods), f"{f.name} importa scripts"
+
+if __name__ == "__main__":
+    import pytest as _pytest
+    raise SystemExit(_pytest.main([__file__, "-q"]))

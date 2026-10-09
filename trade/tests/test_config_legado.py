@@ -1,4 +1,7 @@
 """Los config.yaml de las estrategias legado deben coincidir con las constantes de sus motores (anti-deriva)."""
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[1]))   # permite `python tests/<archivo>.py` desde cualquier carpeta
 from pathlib import Path
 
 import pytest
@@ -38,3 +41,7 @@ def test_config_g2():
         (m.SWEEP0, m.RETEST0, m.RECLAIM_BARS, m.RETEST_FILL_1M, m.HORA_MAX)
     assert (c["salida"]["sl_pts"], c["salida"]["tp_pts"]) == (m.SL0, m.TP0)
     assert (c["calibracion"]["precio"], c["calibracion"]["atr"]) == (m.P_CAL, m.ATR_CAL) and c["min_barras"] == m.MIN_BARRAS
+
+if __name__ == "__main__":
+    import pytest as _pytest
+    raise SystemExit(_pytest.main([__file__, "-q"]))

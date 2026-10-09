@@ -5,6 +5,9 @@
 3) Bootstrap por bloques/por dia vs iid.
 Los numeros de referencia son los del LOG REAL del proyecto (NQ bloque A, combo central (1.0, 1.75)).
 """
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[1]))   # permite `python tests/<archivo>.py` desde cualquier carpeta
 import ast
 import importlib.util
 import sys
@@ -211,3 +214,7 @@ def test_btc_mbt_bloqueados_hasta_verificar():
     with pytest.raises(ValueError, match="NO USAR"):
         costo_trade("MBT", 2025)
     assert "NO USAR HASTA VERIFICAR" in costo_trade("BTC", 2025, permitir_no_verificado=True)["estado"]
+
+if __name__ == "__main__":
+    import pytest as _pytest
+    raise SystemExit(_pytest.main([__file__, "-q"]))

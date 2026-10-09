@@ -1,4 +1,7 @@
 """Modo CFD de cost_model: tablas separadas, brokers, valores dictados, sin invenciones."""
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[1]))   # permite `python tests/<archivo>.py` desde cualquier carpeta
 import pytest
 
 from validacion import (TABLA_CFD, comparar_brokers_cfd, costo_cfd_usd, costo_nq_futuro_usd,
@@ -114,3 +117,7 @@ def test_costo_backtest_us100_modo_cfd():
     assert costo_backtest_us100(0.01)["total_usd"] == pytest.approx(2.00)
     assert costo_backtest_us100(0.10)["total_usd"] == pytest.approx(20.00)
     assert costo_cfd_usd(0.01) == pytest.approx(2.00)
+
+if __name__ == "__main__":
+    import pytest as _pytest
+    raise SystemExit(_pytest.main([__file__, "-q"]))

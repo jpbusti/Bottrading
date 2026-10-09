@@ -1,4 +1,7 @@
 """Tests de integridad de los datasets reconstruidos/limpios."""
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parents[1]))   # permite `python tests/<archivo>.py` desde cualquier carpeta
 import gzip
 from pathlib import Path
 
@@ -138,3 +141,7 @@ def test_nq_10y_v2_completo_y_sin_huecos():
     gap = dt.sort_values().groupby(dt.dt.date).diff().dt.total_seconds() / 60
     assert gap.max() <= 15   # 4 dias de marzo 2020 con huecos de 14-15 min (volatilidad COVID)
     assert (gap > 5).sum() <= 4
+
+if __name__ == "__main__":
+    import pytest as _pytest
+    raise SystemExit(_pytest.main([__file__, "-q"]))
