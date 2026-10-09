@@ -330,7 +330,7 @@ def estado_verificacion_cfd(tabla=None) -> dict:
 
 # ====================================================================== UTILIDADES SIMPLES (sin tabla, sin anio)
 
-def costo_cfd_usd(lote: float, spread_pts: float, slippage_pts_rt: float, comision_usd: float = 0.0) -> float:
+def costo_cfd_usd(lote: float, spread_pts: float = 1.5, slippage_pts_rt: float = 0.5, comision_usd: float = 0.0) -> float:
     """Costo redondo US100 CFD en USD. Formula directa sin tabla de anios.
 
     spread_pts: spread bid-ask pagado una vez RT (p.ej. 1.5).
@@ -358,3 +358,15 @@ def costo_nq_futuro_usd(spread_pts: float = 0.25, slippage_pts_rt: float = 0.50,
     """
     vp = CONTRATOS["NQ"].punto_valor  # $20/punto
     return slippage_pts_rt * vp + comision_usd
+
+
+# Costo de BACKTEST para operar US100/USTEC con precios de NQ: spread fijo 1.5 pts + slippage 0.5 pts RT (0.25/lado) = 2.0 pts RT.
+SPREAD_BACKTEST_US100_PTS = 1.5
+SLIPPAGE_BACKTEST_US100_PTS_RT = 0.5
+COSTO_BACKTEST_US100_PTS = SPREAD_BACKTEST_US100_PTS + SLIPPAGE_BACKTEST_US100_PTS_RT
+
+
+def costo_backtest_us100(lotes: float = 1.0) -> dict:
+    """Costo redondo oficial de backtest en modo cfd (2.0 pts RT): $2.00 con 0.01 lote, $20.00 con 0.10 lote."""
+    return costo_trade_cfd("US100", lotes=lotes, spread_pts=SPREAD_BACKTEST_US100_PTS,
+                           slippage_pts_lado=SLIPPAGE_BACKTEST_US100_PTS_RT / 2)

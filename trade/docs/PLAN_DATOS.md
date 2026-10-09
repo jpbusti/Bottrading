@@ -121,3 +121,12 @@ Ver `validacion/cost_model.py` y `docs/PREREGISTRO_US100_ORB.md`.
 | `scripts/descarga/reconstruir_frontmonth_nq.py` | NQ front-month desde ZST 2016-2021 |
 | `scripts/descarga/reconstruir_frontmonth_es.py` | ES front-month desde ZST 2016-2026 |
 | `scripts/descarga/limpiar_ustec.py` | USTEC: separar diario, filtrar 2018+, convertir spread y timezone |
+
+---
+
+## Precios de NQ, costos de USTEC (backtest)
+
+- **Precios:** vienen de NQ (OHLC 1 min RTH, proxy limpio). No se opera NQ.
+- **Costos:** son los de USTEC en IC Markets, modo `cfd` de `validacion/cost_model.py`: spread fijo 1.5 pts + slippage 0.5 pts RT (0.25 pts/lado) = **2.0 pts redondo** (`costo_backtest_us100`, `COSTO_BACKTEST_US100_PTS`).
+- **PF real:** cada trade resta 2.0 pts de P&L bruto (en NQ-puntos, equivalente 1:1 a USTEC) antes de calcular el PF, de modo que refleja la operativa real en USTEC. A 0.01 lote cuesta $2.00 por trade; a 0.10 lote, $20.00.
+- Es conservador: el spread real de IC Markets en RTH es 1.0-1.5 pts. Sigue marcado [VERIFICAR CON IC MARKETS].

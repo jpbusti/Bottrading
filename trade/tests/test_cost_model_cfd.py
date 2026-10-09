@@ -3,7 +3,7 @@ import pytest
 
 from validacion import (TABLA_CFD, comparar_brokers_cfd, costo_cfd_usd, costo_nq_futuro_usd,
                         costo_pts, costo_trade, costo_trade_cfd, estado_verificacion_cfd)
-from validacion.cost_model import CONTRATOS_CFD, TABLA_IBKR
+from validacion.cost_model import CONTRATOS_CFD, COSTO_BACKTEST_US100_PTS, TABLA_IBKR, costo_backtest_us100
 
 
 def test_tablas_separadas_futuros_y_cfd():
@@ -105,3 +105,12 @@ def test_cfd_vs_futuro_modo_correcto():
     c_fut = costo_trade("NQ", 2025, modo="futuros")
     assert c_cfd["modo"] == "cfd"
     assert c_fut["total_usd"] == pytest.approx(24.30)  # tabla IBKR intacta para proxy
+
+
+def test_costo_backtest_us100_modo_cfd():
+    """Precios NQ, costos USTEC: spread 1.5 + slippage 0.5 RT = 2.0 pts por trade."""
+    assert COSTO_BACKTEST_US100_PTS == pytest.approx(2.0)
+    assert costo_backtest_us100(0.01)["total_pts"] == pytest.approx(2.0)
+    assert costo_backtest_us100(0.01)["total_usd"] == pytest.approx(2.00)
+    assert costo_backtest_us100(0.10)["total_usd"] == pytest.approx(20.00)
+    assert costo_cfd_usd(0.01) == pytest.approx(2.00)
