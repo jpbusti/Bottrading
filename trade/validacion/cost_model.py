@@ -1,5 +1,11 @@
 """Modelo de costos por contrato y POR ANIO (comision + slippage + spread), en dolares y en puntos.
 
+DOS MODOS, TABLAS SEPARADAS (no se mezclan):
+  - modo="futuros" (por defecto): NQ/ES/GC/BTC/MBT de CME via IBKR -> `TABLA_IBKR` / `TABLA_LSR_V1` (abajo).
+  - modo="cfd": US100 Cash / XAUUSD / BTCUSD por broker (IC Markets, Pepperstone, XM) -> `TABLA_CFD` (al final del archivo).
+    La operativa real es CFD US100 Cash; el backtest corre sobre NQ como proxy de precios y el COSTO se evalua con la
+    tabla CFD. Toda fila CFD es [VERIFICAR CON IC MARKETS / PEPPERSTONE] (valores dictados, sin contrastar).
+
 PROCEDENCIA DE LOS VALORES (leer antes de usar)
   - Tabla IBKR (`TABLA_IBKR`, la que usa `costo_trade` por defecto): valores dictados por el usuario (Juan) en el hilo
     del proyecto el 2026-10-08 (comisiones y slippage como "costos de Interactive Brokers"; spread por lado en un
@@ -137,8 +143,18 @@ def costo_anio(inst: str, anio: int, tabla=None, permitir_no_verificado: bool = 
         raise KeyError(f"sin costos para {inst} {anio}") from None
 
 
-def costo_trade(inst: str, anio: int, n_contratos: int = 1, tabla=None, permitir_no_verificado: bool = False) -> dict:
-    """Costo de UN trade redondo (entrada + salida) en USD y en puntos, desglosado (comision + slippage + spread)."""
+def costo_trade(inst: str, anio: int, n_contratos: int = 1, tabla=None, permitir_no_verificado: bool = False,
+                modo: str = "futuros", **kw_cfd) -> dict:
+    """Costo de UN trade redondo (entrada + salida) en USD y en puntos, desglosado.
+
+    modo="futuros": comision + slippage + spread (tabla IBKR). `n_contratos` = contratos.
+    modo="cfd": spread + comision + swap (TABLA_CFD); `n_contratos` = LOTES (puede ser 0.01). kw_cfd: broker, usar_spread,
+      noches, slippage_pts_lado, swap_pts_noche, spread_pts (ver `costo_trade_cfd`).
+    """
+    if modo == "cfd":
+        return costo_trade_cfd(inst, anio, lotes=n_contratos, tabla=tabla, **kw_cfd)
+    if modo != "futuros":
+        raise ValueError(f"modo desconocido: {modo!r} (usa 'futuros' o 'cfd')")
     c = costo_anio(inst, anio, tabla, permitir_no_verificado)
     n = n_contratos
     return dict(inst=inst, anio=anio, contratos=n, estado=c.estado,
@@ -146,12 +162,16 @@ def costo_trade(inst: str, anio: int, n_contratos: int = 1, tabla=None, permitir
                 total_usd=c.total_usd * n, total_pts=c.total_pts)   # puntos son POR contrato
 
 
-def costo_usd(inst: str, anio: int, tabla=None) -> float:
+def costo_usd(inst: str, anio: int, tabla=None, modo: str = "futuros", **kw_cfd) -> float:
+    if modo == "cfd":
+        return costo_trade_cfd(inst, anio, tabla=tabla, **kw_cfd)["total_usd"]
     return costo_anio(inst, anio, tabla).total_usd
 
 
-def costo_pts(inst: str, anio: int, tabla=None) -> float:
-    """Costo ida y vuelta por contrato en puntos (tabla IBKR por defecto)."""
+def costo_pts(inst: str, anio: int, tabla=None, modo: str = "futuros", **kw_cfd) -> float:
+    """Costo ida y vuelta en puntos: futuros = por contrato (tabla IBKR por defecto); cfd = por 1 lote, puntos del indice."""
+    if modo == "cfd":
+        return costo_trade_cfd(inst, anio, tabla=tabla, **kw_cfd)["total_pts"]
     return costo_anio(inst, anio, tabla).total_pts
 
 
@@ -160,3 +180,136 @@ def estado_verificacion(tabla=None) -> dict:
     tabla = TABLA_IBKR if tabla is None else tabla
     pend = sorted({f"{c.inst} {c.anio}" for c in tabla.values() if "VERIFICAR" in c.estado})
     return dict(total=len(tabla), verificados=len(tabla) - len(pend), sin_verificar=pend)
+
+
+# ====================================================================== MODO CFD (tabla SEPARADA de futuros)
+# NO mezclar con TABLA_IBKR. Fuente de TODOS los valores: mensaje del usuario (Juan) 2026-10-09 (version editada).
+# Todo es [VERIFICAR CON IC MARKETS / PEPPERSTONE]: no se ha contrastado con la ficha del broker ni con spreads reales.
+# Spread: rango (min, max) en PUNTOS del instrumento. Para backtest conservador se usa el MAXIMO por defecto.
+# Pepperstone y XM: el usuario NO dio spread de Pepperstone, ni de XM para XAUUSD/BTCUSD -> `None` (sin dato, no se
+#   inventa). Un spread `None` hace que `costo_trade_cfd` falle salvo que se pase `spread_pts=` explicito.
+# Swap: el usuario dijo "si aplica" sin cifras -> `None`. Trades intradia (noches=0) no pagan swap; si noches>0 hay que
+#   pasar `swap_pts_noche=` o falla. Los swaps reales dependen del broker/dia (triple los miercoles) [VERIFICAR].
+# Slippage CFD: no dictado -> 0.0 por defecto y el resultado marca `slippage_modelado=False`. La metodologia exige
+#   modelarlo: pasa `slippage_pts_lado=` en el backtest serio.
+# Tamano de contrato (USD por 1.0 punto con 1 lote): especificacion tipica, NO dictada por el usuario [VERIFICAR] en la
+#   ficha del broker (algunos brokers usan $10/pt por lote en US100).
+# Un solo nivel de spread por (instrumento, broker): no hay historico por anio. Aplicar el spread de hoy a 2016-2021
+#   (NQ proxy) es un supuesto optimista [VERIFICAR].
+BROKER_PRIORITARIO = "IC Markets"
+BROKERS_CFD = ("IC Markets", "Pepperstone", "XM")
+ESTADO_CFD = "[VERIFICAR CON IC MARKETS / PEPPERSTONE]"
+SPREAD_ANIOS_NOTA = "spread unico (sin historico por anio) [VERIFICAR]"
+
+
+@dataclass(frozen=True)
+class CFD:
+    sym: str                 # nombre del simbolo en el broker
+    proxy: str               # instrumento de futuros usado como proxy de precios en backtest
+    valor_punto_lote: float  # USD por 1.0 punto con 1 lote [VERIFICAR en la ficha del broker]
+
+
+CONTRATOS_CFD: dict[str, CFD] = {
+    "US100": CFD("US100 Cash", "NQ", 1.0),
+    "XAUUSD": CFD("XAUUSD", "GC", 100.0),     # 1 lote = 100 oz (tipico)
+    "BTCUSD": CFD("BTCUSD", "BTC", 1.0),      # 1 lote = 1 BTC (tipico)
+}
+
+
+@dataclass(frozen=True)
+class CostoCFD:
+    inst: str
+    broker: str
+    spread_pts_min: float | None
+    spread_pts_max: float | None
+    comision_usd_lote_rt: float = 0.0           # cuenta Standard: $0 (dictado)
+    swap_pts_noche_long: float | None = None    # sin dato: "si aplica"
+    swap_pts_noche_short: float | None = None
+    estado: str = ESTADO_CFD
+    nota: str = "valores dictados por el usuario 2026-10-09, sin confirmar con el broker; " + SPREAD_ANIOS_NOTA
+
+    @property
+    def tiene_spread(self) -> bool:
+        return self.spread_pts_max is not None
+
+
+def _cfd(inst, broker, lo=None, hi=None, nota=None):
+    kw = {} if nota is None else dict(nota=nota)
+    return (inst, broker), CostoCFD(inst, broker, lo, hi, **kw)
+
+
+_SIN_DATO = "sin dato del usuario: NO inventado [VERIFICAR]"
+TABLA_CFD: dict[tuple[str, str], CostoCFD] = dict([
+    _cfd("US100", "IC Markets", 1.0, 1.5),
+    _cfd("XAUUSD", "IC Markets", 0.15, 0.30),
+    _cfd("BTCUSD", "IC Markets", 10.0, 50.0, "spread variable segun volatilidad (rango dictado) [VERIFICAR]"),
+    _cfd("US100", "Pepperstone", nota=_SIN_DATO),
+    _cfd("XAUUSD", "Pepperstone", nota=_SIN_DATO),
+    _cfd("BTCUSD", "Pepperstone", nota=_SIN_DATO),
+    _cfd("US100", "XM", 1.5, 2.5, "rango dictado como referencia de comparacion (no para operar) [VERIFICAR]"),
+    _cfd("XAUUSD", "XM", nota=_SIN_DATO),
+    _cfd("BTCUSD", "XM", nota=_SIN_DATO),
+])
+
+
+def costo_cfd(inst: str, broker: str = BROKER_PRIORITARIO, tabla=None) -> CostoCFD:
+    tabla = TABLA_CFD if tabla is None else tabla
+    try:
+        return tabla[(inst, broker)]
+    except KeyError:
+        raise KeyError(f"sin costos CFD para {inst} / {broker}") from None
+
+
+def costo_trade_cfd(inst: str, anio: int | None = None, lotes: float = 1.0, broker: str = BROKER_PRIORITARIO,
+                    tabla=None, usar_spread: str = "max", noches: int = 0, slippage_pts_lado: float = 0.0,
+                    swap_pts_noche: float | None = None, spread_pts: float | None = None, lado: str = "long") -> dict:
+    """Costo de UN trade redondo en CFD (entrada + salida), en puntos del indice y en USD.
+
+    - Spread: se paga UNA vez ida y vuelta (compras al ask, vendes al bid). `usar_spread` = "min" | "max" | "medio".
+      `spread_pts` lo reemplaza (p.ej. spread observado en tu demo).
+    - Comision: $0 en cuenta Standard (dictado) x lotes.
+    - Swap: `noches` x (`swap_pts_noche` o el de la tabla); si noches>0 y no hay dato -> error (no se asume 0).
+    - Slippage: 0 por defecto; el resultado marca `slippage_modelado`. `anio` solo se conserva por compatibilidad con el
+      modo futuros: NO cambia el costo (no hay historico por anio).
+    """
+    if inst not in CONTRATOS_CFD:
+        raise KeyError(f"instrumento CFD desconocido: {inst} ({sorted(CONTRATOS_CFD)})")
+    c = costo_cfd(inst, broker, tabla)
+    if spread_pts is None:
+        if not c.tiene_spread:
+            raise ValueError(f"{inst} / {broker}: sin spread cargado {ESTADO_CFD}; pasa spread_pts= explicito")
+        spread_pts = {"min": c.spread_pts_min, "max": c.spread_pts_max,
+                      "medio": (c.spread_pts_min + c.spread_pts_max) / 2}[usar_spread]
+    swap = 0.0
+    if noches > 0:
+        sw = swap_pts_noche if swap_pts_noche is not None else (
+            c.swap_pts_noche_long if lado == "long" else c.swap_pts_noche_short)
+        if sw is None:
+            raise ValueError(f"{inst} / {broker}: swap sin dato {ESTADO_CFD}; pasa swap_pts_noche= para {noches} noche(s)")
+        swap = noches * sw    # >0 = costo (convencion: puntos que PAGAS por noche)
+    vp = CONTRATOS_CFD[inst].valor_punto_lote
+    pts = spread_pts + 2 * slippage_pts_lado + swap
+    com = c.comision_usd_lote_rt * lotes
+    return dict(modo="cfd", inst=inst, broker=broker, anio=anio, lotes=lotes, estado=c.estado,
+                spread_pts=spread_pts, slippage_pts=2 * slippage_pts_lado, swap_pts=swap,
+                spread_usd=spread_pts * vp * lotes, slippage_usd=2 * slippage_pts_lado * vp * lotes,
+                swap_usd=swap * vp * lotes, comision_usd=com,
+                total_usd=pts * vp * lotes + com, total_pts=pts,    # puntos POR lote (sin comision)
+                slippage_modelado=slippage_pts_lado > 0, valor_punto_lote=vp, nota=c.nota)
+
+
+def comparar_brokers_cfd(inst: str, lotes: float = 1.0, **kw) -> dict:
+    """Costo ida y vuelta por broker (None donde el usuario no dio spread). Para comparar IC Markets / Pepperstone / XM."""
+    out = {}
+    for b in BROKERS_CFD:
+        try:
+            out[b] = costo_trade_cfd(inst, lotes=lotes, broker=b, **kw)["total_usd"]
+        except ValueError:
+            out[b] = None
+    return out
+
+
+def estado_verificacion_cfd(tabla=None) -> dict:
+    tabla = TABLA_CFD if tabla is None else tabla
+    return dict(total=len(tabla), verificados=0, sin_verificar=sorted(f"{c.inst}/{c.broker}" for c in tabla.values()),
+                sin_spread=sorted(f"{c.inst}/{c.broker}" for c in tabla.values() if not c.tiene_spread))
