@@ -5,7 +5,7 @@ Estado de la evidencia: nivel C. Nada de lo de abajo se modifica después de ver
 Lo que ya se sabía antes (transparencia): LSR v1 (barrido de PDH/PDL en NQ) fue rechazada; G2 (barrido+VWAP) dio PF ≈ 1.02-1.03 con IC90 incluyendo 0 en NQ 2021-25. Ambas tuvieron sus propios criterios; aquí se prueban reglas distintas y simples, sin optimizar.
 
 ## 1. Datos y horario
-- Fuente: `data/raw/USTEC_ICMarkets_demo_1m.csv` (velas de 1 minuto del CFD USTEC, demo de IC Markets). Periodo: **2018-01-01 → 2026-10-08**. Antes de 2018 no hay datos 1m completos.
+- Fuente: `data/raw/us100/USTEC_ICMarkets_demo_1m.csv` (velas de 1 minuto del CFD USTEC, demo de IC Markets). Periodo: **2018-01-01 → 2026-10-08**. Antes de 2018 no hay datos 1m completos.
 - Hora del servidor = hora de Nueva York + 7 (verificado contra NQ en 8 periodos de invierno y verano). Todo se convierte a ET.
 - Volumen = `tick_volume` (conteo de cambios de precio del CFD; proxy del volumen real) [VERIFICAR su relación con el volumen del futuro].
 - Sesión RTH = 09:30-16:00 ET. ATR14 = promedio del rango (máx-mín) RTH de las 14 sesiones previas válidas. Una sesión es válida si tiene ≥ 350 velas RTH.

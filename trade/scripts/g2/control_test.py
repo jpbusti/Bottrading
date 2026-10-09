@@ -5,7 +5,7 @@ import numpy as np, pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import motor_g2 as m
 logging.basicConfig(level=logging.INFO, format="%(message)s")
-RUTA = sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / "data" / "raw" / "NQ_databento_1m.csv"
+RUTA = sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / "data" / "raw" / "nq" / "NQ_databento_1m.csv"
 raw = pd.read_csv(RUTA)
 raw["Datetime"] = pd.to_datetime(raw["Datetime"], utc=True).dt.tz_convert(m.NY)
 raw = raw.sort_values("Datetime").drop_duplicates("Datetime")

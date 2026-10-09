@@ -1,6 +1,6 @@
 # Resultado US100 v1: ninguna de las 4 hipótesis pasa
 
-Pre-registro: `claude/PREREGISTRO_US100_V1.md` (commit `5783f39`, escrito antes de correr). Motor: `scripts/us100/motor_us100.py`; corrida: `scripts/us100/run_us100.py`; salidas en `resultados/us100/`.
+Pre-registro: `docs/preregistros/PREREGISTRO_US100_V1.md` (commit `5783f39`, escrito antes de correr). Motor: `scripts/us100/motor_us100.py`; corrida: `scripts/us100/run_us100.py`; salidas en `resultados/us100/`.
 Datos: USTEC (CFD) de la demo de IC Markets, 1 min, 2018-01-02 → 2026-10-08, 2 157 sesiones válidas, ventana de entradas 09:45-11:30 ET (dentro de 8-12 Colombia en verano e invierno). Costo base 2.0 pts por trade (spread 1.5 + slippage 0.25/lado), estrés 3.0 pts. Todos los costos [VERIFICAR CON IC MARKETS].
 
 | Hipótesis | Trades | PF neto | IC90 PF | Exp. R/trade | IC90 exp. | PF bruto (sin costos) | PF con costo 3.0 | Años con PF>1 | Veredicto |

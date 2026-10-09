@@ -22,6 +22,7 @@ while a < hoy:
 df = pd.concat(partes).drop_duplicates("time").sort_values("time")
 df["time_server"] = pd.to_datetime(df["time"], unit="s")
 df = df[["time_server", "open", "high", "low", "close", "tick_volume", "spread", "real_volume"]]
-out = Path(__file__).resolve().parents[2] / "data" / "raw" / f"{sym}_ICMarkets_demo_1m.csv"
+out = Path(__file__).resolve().parents[2] / "data" / "raw" / sym.lower().replace("ustec","us100") / f"{sym}_ICMarkets_demo_1m.csv"
+out.parent.mkdir(parents=True, exist_ok=True)
 df.to_csv(out, index=False)
 print(out, len(df), df.time_server.min(), df.time_server.max())
