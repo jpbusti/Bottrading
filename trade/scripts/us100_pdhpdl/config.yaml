@@ -1,0 +1,58 @@
+# US100 PDH/PDL reversion a la apertura de NY. TODOS los parametros viven aqui y se fijan en docs/PREREGISTRO_US100_PDHPDL.md.
+estrategia: us100_pdhpdl
+estado: preregistro_firmado_2026-10-09   # parametros fijados antes de correr cualquier backtest
+
+instrumento:
+  simbolo: US100            # CFD IC Markets (USTEC en MT5); NQ front-month como proxy de precios
+  clave_costos: US100
+
+datos:
+  fuente: us100             # us100 | nq
+  archivos:
+    us100: data/raw/us100/USTEC_1m_clean_2018_2026.csv   # 24h, ya en hora ET, con Spread_pts por barra
+    nq: data/raw/nq/NQ_1m_RTH_frontmonth_10y_v2.csv.gz   # front-month RTH, tz-aware
+  desde: {us100: "2018-01-01", nq: "2016-01-01"}
+  timeframe_min: 5
+
+sesion:                     # hora ET de pared
+  inicio: "09:30"
+  fin: "16:00"
+  ultima_entrada: "15:00"   # la barra de senal debe iniciar a esta hora o antes
+  salida_forzada: "15:55"   # barra que inicia a esta hora; se sale a su cierre
+
+niveles:
+  # PDH/PDL = maximo/minimo de la sesion RTH (09:30-16:00 ET) del dia habil anterior con datos suficientes.
+  rechazo_cierre: true      # senal solo si la barra que toca el nivel CIERRA del lado de rechazo (bajo PDH / sobre PDL)
+  un_trade_por_nivel_dia: true
+
+atr:
+  periodo: 14
+  base: diario              # ATR(14) diario RTH hasta D-1 (sin look-ahead)
+
+riesgo:
+  k_sl: [0.5, 0.75, 1.0]    # SL = k x ATR
+  m_tp: [0.5, 0.75, 1.0]    # TP = m x ATR
+  combo_central: [0.75, 0.75]
+  riesgo_por_trade_pct: 0.5
+
+costos:
+  spread_pts: {min: 1.0, max: 1.5, base: 1.5}
+  slippage_pts_lado: 0.5    # costo base = 1.5 + 2 x 0.5 = 2.5 pts por trade
+  spread_pts_estres: 3.0
+  por_anio: true            # sensibilidad: spread mediano observado en el CSV USTEC (Spread_pts, 09:30-16:00) de cada anio
+
+validacion:
+  walkforward: {anio_ini: 2019, min_trades_train: 30}
+  placebos: {lags_nivel: [2, 3, 5, 10], sorteos_timing: 200, alpha: 0.05}
+  fragilidad_umbral_dpf: 0.05
+
+aprobacion:
+  pf_min: 1.15
+  ic90_pf_inferior_min: 1.0
+  trades_min: 300
+  max_dd_pct: 20.0
+  rejilla_puntos_min: 9
+
+rejilla_robustez:           # un parametro a la vez alrededor del valor base (run_robustez.py)
+  ultima_entrada: ["14:00", "15:00", "15:30"]
+  rechazo_cierre: [true, false]
