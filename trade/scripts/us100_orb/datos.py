@@ -10,9 +10,9 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 def _a_et_naive(idx: pd.Series, cfg: dict) -> pd.DatetimeIndex:
-    """Hora de pared de Nueva York sin zona."""
+    """Hora de pared de Nueva York sin zona. USTEC limpio ya viene en ET; NQ trae offset y se convierte."""
     if cfg["datos"]["fuente"] == "us100":
-        return pd.DatetimeIndex(idx - pd.Timedelta(hours=cfg["datos"]["offset_servidor_h"]))
+        return pd.DatetimeIndex(pd.to_datetime(idx))
     return pd.DatetimeIndex(pd.to_datetime(idx, utc=True).dt.tz_convert("America/New_York").dt.tz_localize(None))
 
 
@@ -20,9 +20,9 @@ def cargar_1m(cfg: dict) -> pd.DataFrame:
     """Barras de 1m -> DataFrame(open, high, low, close, volume) indexado por hora ET de pared."""
     ruta = RAIZ / cfg["datos"]["archivos"][cfg["datos"]["fuente"]]
     if cfg["datos"]["fuente"] == "us100":
-        d = pd.read_csv(ruta, parse_dates=["time_server"])
-        d = d.rename(columns={"tick_volume": "volume"})
-        et = _a_et_naive(d["time_server"], cfg)
+        d = pd.read_csv(ruta, parse_dates=["Datetime"])
+        d = d.rename(columns={"TickVolume": "volume"}).rename(columns=str.lower)
+        et = _a_et_naive(d["datetime"], cfg)
     else:
         d = pd.read_csv(ruta, index_col=0).rename(columns=str.lower)
         et = _a_et_naive(pd.Series(d.index), cfg)

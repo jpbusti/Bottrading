@@ -10,9 +10,8 @@ instrumento:
 datos:
   fuente: us100             # us100 | nq
   archivos:
-    us100: data/raw/us100/USTEC_ICMarkets_demo_1m.csv
-    nq: data/raw/nq/NQ_databento_1m_10y_RTH.csv.gz
-  offset_servidor_h: 7      # hora servidor MT5 = hora ET + 7 (igual que US100 v1)
+    us100: data/raw/us100/USTEC_1m_clean_2018_2026.csv   # ya en hora ET (limpiar_ustec.py), columnas Datetime/TickVolume
+    nq: data/raw/nq/NQ_1m_RTH_frontmonth_10y_v2.csv.gz   # 2577 dias, front-month, RTH, tz-aware
   desde: "2018-01-01"       # [VERIFICAR] igual que US100 v1
   timeframe_min: 5
 
