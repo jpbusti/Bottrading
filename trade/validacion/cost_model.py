@@ -1,10 +1,23 @@
 """Modelo de costos por contrato y POR ANIO (comision + slippage + spread), en dolares y en puntos.
 
+Este cost_model opera en dos modos: CFD (US100, operativa real) y futuro (NQ, proxy para backtest).
+Los backtests de estrategias para operar en US100 deben usar el modo CFD con el lote real.
+
 DOS MODOS, TABLAS SEPARADAS (no se mezclan):
   - modo="futuros" (por defecto): NQ/ES/GC/BTC/MBT de CME via IBKR -> `TABLA_IBKR` / `TABLA_LSR_V1` (abajo).
   - modo="cfd": US100 Cash / XAUUSD / BTCUSD por broker (IC Markets, Pepperstone, XM) -> `TABLA_CFD` (al final del archivo).
-    La operativa real es CFD US100 Cash; el backtest corre sobre NQ como proxy de precios y el COSTO se evalua con la
+    La operativa real es CFD US100 Cash; el backtest corre sobre datos USTEC y el COSTO se evalua con la
     tabla CFD. Toda fila CFD es [VERIFICAR CON IC MARKETS / PEPPERSTONE] (valores dictados, sin contrastar).
+
+VALORES POR PUNTO US100 CFD (IC Markets):
+  - 1 lote = $100/punto (especificacion estandar IC Markets para US100/NAS100)
+  - 0.01 lote = $1/punto  -> costo redondo ~$2.00-2.50 (spread 1.0-1.5 pts + slippage 0.5 pts/lado)
+  - 0.05 lote = $5/punto  -> costo redondo ~$10.00-12.50
+  - 0.10 lote = $10/punto -> costo redondo ~$20.00-25.00
+  - 1.00 lote = $100/punto-> costo redondo ~$200-250
+
+VALORES POR PUNTO NQ FUTURO (CME via IBKR) - solo proxy:
+  - $20/punto; tick 0.25 pts = $5; comision ~$4.30 RT; slippage ~0.25 pts/lado -> costo redondo ~$14-15
 
 PROCEDENCIA DE LOS VALORES (leer antes de usar)
   - Tabla IBKR (`TABLA_IBKR`, la que usa `costo_trade` por defecto): valores dictados por el usuario (Juan) en el hilo
@@ -210,7 +223,7 @@ class CFD:
 
 
 CONTRATOS_CFD: dict[str, CFD] = {
-    "US100": CFD("US100 Cash", "NQ", 1.0),
+    "US100": CFD("US100 Cash", "NQ", 100.0),   # 1 lote = $100/punto (IC Markets estandar)
     "XAUUSD": CFD("XAUUSD", "GC", 100.0),     # 1 lote = 100 oz (tipico)
     "BTCUSD": CFD("BTCUSD", "BTC", 1.0),      # 1 lote = 1 BTC (tipico)
 }
@@ -313,3 +326,35 @@ def estado_verificacion_cfd(tabla=None) -> dict:
     tabla = TABLA_CFD if tabla is None else tabla
     return dict(total=len(tabla), verificados=0, sin_verificar=sorted(f"{c.inst}/{c.broker}" for c in tabla.values()),
                 sin_spread=sorted(f"{c.inst}/{c.broker}" for c in tabla.values() if not c.tiene_spread))
+
+
+# ====================================================================== UTILIDADES SIMPLES (sin tabla, sin anio)
+
+def costo_cfd_usd(lote: float, spread_pts: float, slippage_pts_rt: float, comision_usd: float = 0.0) -> float:
+    """Costo redondo US100 CFD en USD. Formula directa sin tabla de anios.
+
+    spread_pts: spread bid-ask pagado una vez RT (p.ej. 1.5).
+    slippage_pts_rt: slippage total ida+vuelta (p.ej. 0.5 pts = 0.25 pts/lado x 2).
+    comision_usd: $0 en cuenta IC Markets Standard.
+
+    Ejemplos:
+      costo_cfd_usd(0.01, 1.5, 0.5) -> $2.00   (0.01 lote, spread+slip = 2.0 pts x $100/pt x 0.01)
+      costo_cfd_usd(0.05, 1.5, 0.5) -> $10.00
+      costo_cfd_usd(0.10, 1.5, 0.5) -> $20.00
+    """
+    vp = CONTRATOS_CFD["US100"].valor_punto_lote  # $100/pt/lote
+    return (spread_pts + slippage_pts_rt) * vp * lote + comision_usd
+
+
+def costo_nq_futuro_usd(spread_pts: float = 0.25, slippage_pts_rt: float = 0.50,
+                        comision_usd: float = 4.30) -> float:
+    """Costo redondo NQ futuro en USD (CME via IBKR). Formula directa sin tabla de anios.
+
+    spread_pts: spread bid-ask del mercado (informativo; ya incluido en slippage_pts_rt).
+    slippage_pts_rt: friccion total RT en pts (spread + ejecucion; tipico 0.50 pts = 0.25 pts/lado x 2).
+    comision_usd: tipico $4.30 RT (IBKR).
+
+    Ejemplo: costo_nq_futuro_usd(0.25, 0.50, 4.30) -> $14.30  (0.50 pts x $20 + $4.30)
+    """
+    vp = CONTRATOS["NQ"].punto_valor  # $20/punto
+    return slippage_pts_rt * vp + comision_usd
