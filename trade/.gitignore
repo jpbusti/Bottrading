@@ -15,5 +15,5 @@ organizar_proyecto.log
 .env
 *.log
 data/processed/**/*.pkl
-archivo/datos_locales_obsoletos/
-archivo/datos_locales_obsoletos/
+scripts/_archivo/datos_locales_obsoletos/
+scripts/_archivo/datos_locales_obsoletos/

@@ -7,7 +7,7 @@ Motor de validacion G2 (regla congelada: barrido + retest + VWAP, SL/TP fijos no
     metodo "PCT": s = Close(D-1) / P_CAL
     metodo "FIJO": s = 1  (puntos fijos, sin normalizar)
   Todos los parametros en puntos (SL, TP, barrido, tolerancia de retest, bin) se multiplican por s_D.
-- Logica de senales, perfil y simulacion copiada de archivo/marco_subastas/marco_subastas_stop_amplio.py.
+- Logica de senales, perfil y simulacion copiada de scripts/_archivo/marco_subastas/marco_subastas_stop_amplio.py.
 """
 from __future__ import annotations
 

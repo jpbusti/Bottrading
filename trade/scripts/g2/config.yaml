@@ -1,0 +1,8 @@
+# G2 (barrido + retest + VWAP, regla congelada) - LEGADO CERRADO (no aprobada). Referencia de motor_g2.py.
+# tests/test_config_legado.py verifica que coincidan con las constantes del motor.
+estado: legado_no_aprobada
+perfil: {bin_pts: 2.5, area_valor_pct: 0.70}
+senal: {barrido_pts: 2.0, retest_pts: 1.0, reclaim_barras: 6, retest_fill_1m: 60, hora_max_min: 900}
+salida: {sl_pts: 80.0, tp_pts: 110.0}
+calibracion: {precio: 27205.8, atr: 445.9}   # 2025-10-07 -> 2026-10-06 (254 sesiones)
+min_barras: 200

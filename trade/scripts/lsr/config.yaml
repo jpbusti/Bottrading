@@ -1,0 +1,9 @@
+# LSR v1 (Liquidity Sweep Reversal) - LEGADO CERRADO (rechazada). Referencia de los parametros de motor_lsr.py.
+# tests/test_config_legado.py verifica que coincidan con las constantes del motor (no pueden divergir en silencio).
+# Parametros que siguen dentro de la logica de motor_lsr.py (horarios de bloques A/B, umbral de volumen 1.5x/20 velas): ver README.
+estado: legado_rechazada
+tick: 0.25
+multiplicador: {NQ: 20.0, ES: 50.0}
+rejilla: {k_sl_atr: [0.8, 1.0, 1.2], m_tp_atr: [1.5, 1.75, 2.0]}
+referencia_pf_costo: [0.179, 0.247]
+min_barras_rth: 350

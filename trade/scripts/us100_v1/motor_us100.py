@@ -1,4 +1,4 @@
-"""Motor US100 v1: reglas de docs/preregistros/PREREGISTRO_US100_V1.md (H1 ORB, H2 VWAP, H3 PDH/PDL, H4 area de valor).
+"""Motor US100 v1: reglas de docs/PREREGISTRO_US100_V1.md (H1 ORB, H2 VWAP, H3 PDH/PDL, H4 area de valor).
 
 Datos: velas 1m del CFD USTEC (IC Markets demo). Hora servidor = hora ET + 7 -> se trabaja en hora de pared de NY.
 Indices por dia: idx 0 = 09:30 ET ... idx 389 = 15:59 ET. Ventana de trading: senal al cierre de idx s (15..119),

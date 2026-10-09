@@ -1,5 +1,5 @@
-"""Corre las 4 hipotesis del pre-registro US100 v1 y evalua los 7 criterios. Escribe resultados/us100/*.csv y resumen.json.
-Uso: python scripts/us100/run_us100.py"""
+"""Corre las 4 hipotesis del pre-registro US100 v1 y evalua los 7 criterios. Escribe resultados/us100_v1/*.csv y resumen.json.
+Uso: python scripts/us100_v1/run_us100.py"""
 import json
 import sys
 from pathlib import Path
@@ -8,11 +8,11 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scripts.us100 import motor_us100 as m  # noqa: E402
+from scripts.us100_v1 import motor_us100 as m  # noqa: E402
 from validacion import pf_inference as pi  # noqa: E402
 from validacion.placebo import p_valor, placebo_direccion, placebo_nivel  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[2] / "resultados" / "us100"
+OUT = Path(__file__).resolve().parents[2] / "resultados" / "us100_v1"
 OUT.mkdir(parents=True, exist_ok=True)
 HIPS = ["H1", "H2", "H3", "H4"]
 N_TIMING = 200

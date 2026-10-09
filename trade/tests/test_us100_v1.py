@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from scripts.us100 import motor_us100 as m
+from scripts.us100_v1 import motor_us100 as m
 
 
 def _dia(o=100.0, n=390):

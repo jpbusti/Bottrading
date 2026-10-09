@@ -1,0 +1,72 @@
+# US100 ORB filtrado (VWAP + volumen + retest). TODOS los parametros de la estrategia viven aqui.
+# Valores confirmados por Juan (2026-10-09) y fijados en docs/PREREGISTRO_US100_ORB.md.
+estrategia: us100_orb
+estado: preregistro_firmado_2026-10-09   # parametros confirmados por Juan; sin backtest completo aun
+
+instrumento:
+  simbolo: US100            # CFD IC Markets (USTEC en MT5); NQ como proxy de precios
+  clave_costos: US100       # clave en validacion/cost_model.py (TABLA_CFD)
+
+datos:
+  fuente: us100             # us100 | nq
+  archivos:
+    us100: data/raw/us100/USTEC_ICMarkets_demo_1m.csv
+    nq: data/raw/nq/NQ_databento_1m_10y_RTH.csv.gz
+  offset_servidor_h: 7      # hora servidor MT5 = hora ET + 7 (igual que US100 v1)
+  desde: "2018-01-01"       # [VERIFICAR] igual que US100 v1
+  timeframe_min: 5
+
+sesion:                     # hora ET de pared
+  inicio: "09:30"
+  fin: "16:00"
+  ultima_entrada: "15:00"   # no se entra despues de esta hora (inicio de la barra de entrada)
+  salida_forzada: "15:55"   # barra que inicia a esta hora; se sale a su cierre (16:00)
+
+opening_range:
+  minutos: 15               # 09:30-09:45 ET = 3 barras de 5m
+
+filtros:
+  vwap_pendiente:
+    activo: true
+    barras: 5               # VWAP(t) - VWAP(t-5 barras de 5m): >0 largo, <0 corto
+  volumen:
+    activo: true
+    multiplo: 1.5           # volumen de la barra de ruptura > 1.5 x media de 20 barras
+    ventana: 20             # barras 5m previas (continuas entre sesiones)
+  retest:
+    activo: true
+    max_barras: 6           # barras de 5m para que el precio vuelva a tocar el nivel roto
+    tolerancia_pts: 0.0     # [VERIFICAR] (no confirmado)
+
+atr:
+  periodo: 14
+  base: diario              # ATR(14) diario RTH hasta D-1: SL/TP y filtros de regimen
+  intradia_5m: {periodo: 14, uso: "solo filtros intradia opcionales (ninguno activo en este pre-registro)"}
+
+riesgo:
+  k_sl: [0.8, 1.0, 1.2]     # SL = k x ATR
+  m_tp: [1.5, 1.75, 2.0]    # TP = m x ATR
+  combo_central: [1.0, 1.75]
+  riesgo_por_trade_pct: 0.5 # [VERIFICAR] para convertir max DD en R a % de cuenta
+
+costos:
+  spread_pts: {min: 1.0, max: 1.5, base: 1.5}   # IC Markets US100; base = max (conservador). Comision 0 (cuenta Standard)
+  slippage_pts_lado: 0.5                          # => costo total = spread (1.0-1.5) + 2 x 0.5 = 2.0-2.5 pts
+  spread_pts_estres: 3.0                          # sensibilidad de costos
+
+validacion:
+  walkforward: {anio_ini: 2019, min_trades_train: 30}
+  placebos: {lags_nivel: [2, 3, 5, 10], sorteos_timing: 200, alpha: 0.05}
+  fragilidad_umbral_dpf: 0.05
+
+aprobacion:
+  pf_min: 1.15
+  ic90_pf_inferior_min: 1.0
+  trades_min: 300
+  max_dd_pct: 20.0
+  rejilla_puntos_min: 9      # los 9 puntos k x m con PF >= pf_min e IC90 inferior > 1 (criterio de atr_grid.rejilla)
+
+rejilla_robustez:           # variaciones de un parametro a la vez alrededor del valor base (run_robustez.py)
+  vwap_barras: [3, 5, 10]
+  retest_max_barras: [4, 6, 8]
+  ultima_entrada: ["14:30", "15:00", "15:30"]

@@ -1,5 +1,5 @@
 """
-Motor Liquidity Sweep Reversal v1 (LSR v1) - reglas en docs/preregistros/PREREGISTRO_LSR_V1.md.
+Motor Liquidity Sweep Reversal v1 (LSR v1) - reglas en docs/PREREGISTRO_LSR_V1.md.
 - Contrato operado del dia D = contrato dominante (mayor volumen RTH) de D-1; PDH/PDL/cierre de ESE contrato en D-1.
 - Velas 5m desde 1m; sin actualizar niveles intradia; un trade por dia y bloque.
 - Bloque A: barrido desde 09:30, entrada (cierre de vela de reclaim) en 09:45-12:00 o 14:00-15:30 ET, salida 15:59.

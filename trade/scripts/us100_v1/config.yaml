@@ -1,0 +1,9 @@
+# US100 v1 (H1 ORB, H2 VWAP, H3 PDH/PDL, H4 area de valor; 1m, ventana 8-12 Colombia) - LEGADO CERRADO (ninguna aprobada).
+# tests/test_config_legado.py verifica que coincidan con las constantes de motor_us100.py y run_us100.py.
+estado: legado_ninguna_aprobada
+datos: {archivo: data/raw/us100/USTEC_ICMarkets_demo_1m.csv, desde: "2018-01-01", offset_servidor_h: 7}
+ventana: {n_rth: 390, fin_ventana_idx: 149, max_entrada_idx: 120, s_min_idx: 15}
+perfil_bin_pts: 2.5
+costos: {slippage_lado_base: 0.25, slippage_lado_estres: 0.75}   # + spread IC Markets via validacion/cost_model.py
+rejilla: {umbral: [0.75, 1.0, 1.25], tp_mult: [1.0, 1.5, 2.0], sl_mult_h2: [0.15, 0.20, 0.25]}
+placebo_timing_sorteos: 200
