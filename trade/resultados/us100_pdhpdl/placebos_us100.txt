@@ -1,0 +1,5 @@
+US100 PDH/PDL us100 combo (0.75, 0.75): n=668
+nivel: {'pf_real': 0.9158961360069858, 'pf_placebo': {2: 0.6863321215100358, 3: 0.8674212633757029, 5: 0.92724208900733, 10: 1.3407701495978899}, 'supera': False, 'peor_placebo': 1.3407701495978899}
+timing: {'pf_real': 0.9158961360069858, 'pf_placebo_med': 0.9145008182878702, 'pf_placebo_p95': 1.052870804259408, 'p': 0.5024875621890548, 'supera': False}
+direccion: {'pf_real': 0.9158961360069858, 'pf_invertido': 0.9515768528175281, 'supera': False}
+veredicto: {'nivel': False, 'timing': False, 'direccion': False, 'todos': False}
