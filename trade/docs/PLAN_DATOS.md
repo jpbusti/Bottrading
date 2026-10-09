@@ -136,3 +136,30 @@ Ver `validacion/cost_model.py` y `docs/PREREGISTRO_US100_ORB.md`.
 - `data/raw/nq/NQ_1m_RTH_frontmonth_10y.csv.gz`: 981,990 filas, 2,557 dias, 2016-10-10 -> 2026-10-07. Tramo 2016-2021 = front-month por volumen (ZST); tramo 2021-2026 = Databento `NQ.c.0` (continuo por volumen), coste $6.40, script `scripts/descarga/descargar_nq_2021_2026.py`.
 - Falta 20 dias respecto a ES, todos viernes de vencimiento trimestral (p.ej. 2021-12-17, 2022-03-18) del tramo 2021-2026 [VERIFICAR: posible hueco de `NQ.c.0` el dia del roll].
 - Databento avisa de dias con calidad reducida (2021-12-05, 2022-01-02, 2024-09-18...) [VERIFICAR].
+
+## NQ 10 anios v2, completo (2026-10-09)
+
+- `data/raw/nq/NQ_1m_RTH_frontmonth_10y_v2.csv.gz`: **989,790 filas, 2,577 dias** (= ES), 2016-10-10 -> 2026-10-07. Se rellenaron los 20 viernes de vencimiento (2021-12-17 ... 2026-09-18) con `NQ.FUT` parent, contrato de mayor volumen del dia (NQH2, NQM2, ..., NQZ6; 390 barras cada uno); coste ~$0.2. Script `scripts/descarga/rellenar_nq_dias_faltantes.py`. El ZST 2016-2021 no cubria ninguno de esos dias (todos son posteriores a 2021-10-08). El original no se sobreescribio.
+- Huecos > 5 min en RTH: solo 4 dias, todos en marzo 2020 (9, 12, 16, 18; 14-15 min, volatilidad COVID). 90 dias con < 390 barras (medias sesiones y festivos).
+
+## Dias con calidad reducida (Databento, GLBX.MDP3, 2016-10-09 -> 2026-10-08)
+
+Databento marca 24 dias "degraded" (la API solo da la condicion, no el detalle del problema [VERIFICAR con soporte/Databento]). 8 caen en fin de semana (sin RTH). Los 16 entre semana: 2017-11-13, 2019-01-15, 2019-02-22, 2019-03-13, 2019-03-26, 2020-02-27, 2020-02-28, 2020-05-05, 2020-06-30, 2020-07-01, 2024-09-18, 2025-09-17, 2025-09-24, 2025-11-28, 2026-03-16, 2026-04-10.
+Revision en nuestros datos RTH: 390 barras (225 el 2025-11-28, media sesion), sin huecos > 1 min, sin volumen 0, sin OHLC inconsistente. **Decision: mantenerlos con [VERIFICAR]**; no se excluyen del backtest, pero un resultado que dependa de ellos debe repetirse sin esos 16 dias.
+
+## Reproduccion de G2 y LSR v1 (2026-10-09)
+
+Script `scripts/verificacion/reproducir_g2_lsr.py`; motores congelados, sin estrategias nuevas.
+
+| Prueba | Datos | Costo | n | PF | Referencia |
+|---|---|---|---|---|---|
+| G2 control (VWAP 80/110, ultimo anio) | NQ_databento_1m.csv | 3.0 | 172 | 1.629 | original 1.629 (reproduce) |
+| G2 | NQ 10y_v2, desde 2025-10-07 | 3.0 | 173 | 1.606 | n 173 vs 172: ~0.02 de diferencia |
+| G2 | idem | CFD 2.0 | 173 | 1.644 | |
+| G2 | NQ 10y_v2, 10 anios | 3.0 / 2.0 | 1790 | 1.068 / 1.101 (IC90 inf. 0.971 / 1.002) | no pasa IC90 con costo 3; con 2.0 queda en el borde |
+| LSR v1 NQ central 1.0/1.75 | pkl NQ_contratos_ext (datos antiguos) | congelado | 537 | neto 0.995 (bruto 1.066) | doc: 0.991-1.004 |
+| LSR v1 NQ | idem | CFD 2.0 | 537 | 0.954, IC90 [0.790, 1.155] | |
+| LSR v1 ES | idem | congelado / 2.0 | 1096 | 0.898 / 0.766 | 2.0 pts en ES no es el costo de USTEC: solo informativo |
+
+- G2 reproduce en el ultimo anio; el PF 1.63 NO se sostiene en 10 anios (1.07), coherente con `RESULTADO_G2_VALIDACION.md`.
+- LSR v1 usa los pkl por contrato (con premercado y `ES/NQ_contratos_ext`), no los CSV front-month nuevos; el costo congelado de NQ es menor a 2.0 pts, por eso el PF neto baja con costo CFD. El "1.06" que mencionas corresponde al PF **bruto** (1.066). Reproduce [la referencia original de LSR es el doc, no un PF 1.06 neto].

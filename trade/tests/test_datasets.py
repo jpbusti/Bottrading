@@ -124,3 +124,17 @@ def test_ustec_columnas_esperadas():
     df = _load_ustec()
     for col in ["Datetime", "Open", "High", "Low", "Close", "TickVolume", "Spread_pts", "RealVolume"]:
         assert col in df.columns, f"Columna {col} faltante"
+
+
+NQ_V2 = BASE / "data/raw/nq/NQ_1m_RTH_frontmonth_10y_v2.csv.gz"
+
+
+@pytest.mark.skipif(not NQ_V2.exists(), reason="NQ 10y v2 no generado")
+def test_nq_10y_v2_completo_y_sin_huecos():
+    with gzip.open(NQ_V2, "rt") as f:
+        df = pd.read_csv(f)
+    dt = pd.to_datetime(df["Datetime"], utc=True).dt.tz_convert("America/New_York")
+    assert dt.dt.date.nunique() == 2577
+    gap = dt.sort_values().groupby(dt.dt.date).diff().dt.total_seconds() / 60
+    assert gap.max() <= 15   # 4 dias de marzo 2020 con huecos de 14-15 min (volatilidad COVID)
+    assert (gap > 5).sum() <= 4
